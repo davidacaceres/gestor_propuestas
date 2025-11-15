@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Proposal, ProposalStatus, Client, TeamMember } from '../types';
-import { PlusIcon, FileTextIcon, ArchiveBoxIcon, ClockIcon, UserIcon, MagnifyingGlassIcon } from './Icon';
+import { PlusIcon, FileTextIcon, ArchiveBoxIcon, ClockIcon, UserIcon, MagnifyingGlassIcon, FireIcon } from './Icon';
 
 interface ProposalListProps {
   proposals: Proposal[];
@@ -20,38 +20,52 @@ const statusClasses: Record<ProposalStatus, string> = {
   'Archivado': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 };
 
-const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: TeamMember; onSelect: () => void }> = ({ proposal, client, leader, onSelect }) => (
-  <div onClick={onSelect} className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border border-gray-200 dark:border-gray-700 overflow-hidden">
-    <div className="p-5">
-      <div className="flex justify-between items-start">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 pr-4">{proposal.title}</h3>
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClasses[proposal.status]}`}>
-          {proposal.status}
-        </span>
-      </div>
-      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{client?.companyName || 'Cliente no encontrado'}</p>
-      <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-        <div className="space-y-1">
-            <p>Creado: {proposal.createdAt.toLocaleDateString('es-ES')}</p>
-            <p className="flex items-center">
-                <ClockIcon className="w-4 h-4 mr-1.5 text-gray-400 dark:text-gray-500" />
-                Límite: <span className="font-semibold ml-1 dark:text-gray-300">{proposal.deadline.toLocaleDateString('es-ES')}</span>
-            </p>
-            {leader && (
-              <p className="flex items-center" title={`Líder: ${leader.name}`}>
-                  <UserIcon className="w-4 h-4 mr-1.5 text-gray-400 dark:text-gray-500" />
-                  Líder: <span className="font-semibold ml-1 dark:text-gray-300 truncate">{leader.name}</span>
-              </p>
-            )}
+const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: TeamMember; onSelect: () => void }> = ({ proposal, client, leader, onSelect }) => {
+  const now = new Date();
+  const deadline = proposal.deadline;
+  // Ensure deadline is a valid date before comparison
+  const deadlineTime = deadline instanceof Date ? deadline.getTime() : new Date(deadline).getTime();
+  const daysRemaining = Math.ceil((deadlineTime - now.getTime()) / (1000 * 60 * 60 * 24));
+  const isUrgent = daysRemaining >= 0 && daysRemaining <= 7 && proposal.status !== 'Aceptado' && proposal.status !== 'Archivado';
+  
+  const cardClasses = `bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border ${
+    isUrgent ? 'border-amber-500 dark:border-amber-400' : 'border-gray-200 dark:border-gray-700'
+  } overflow-hidden`;
+
+  return (
+    <div onClick={onSelect} className={cardClasses}>
+      <div className="p-5">
+        <div className="flex justify-between items-start">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 pr-4">{proposal.title}</h3>
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClasses[proposal.status]}`}>
+            {proposal.status}
+          </span>
         </div>
-        <div className="flex items-center">
-            <FileTextIcon className="w-4 h-4 mr-1.5"/>
-            <span>{proposal.documents.length} documento(s)</span>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{client?.companyName || 'Cliente no encontrado'}</p>
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+          <div className="space-y-1">
+              <p>Creado: {proposal.createdAt.toLocaleDateString('es-ES')}</p>
+              <p className={`flex items-center ${isUrgent ? 'text-amber-600 dark:text-amber-500' : ''}`}>
+                  {isUrgent && <FireIcon className="w-4 h-4 mr-1.5" />}
+                  <ClockIcon className={`w-4 h-4 mr-1.5 ${isUrgent ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'}`} />
+                  Límite: <span className={`font-semibold ml-1 ${isUrgent ? '' : 'dark:text-gray-300'}`}>{proposal.deadline.toLocaleDateString('es-ES')}</span>
+              </p>
+              {leader && (
+                <p className="flex items-center" title={`Líder: ${leader.name}`}>
+                    <UserIcon className="w-4 h-4 mr-1.5 text-gray-400 dark:text-gray-500" />
+                    Líder: <span className="font-semibold ml-1 dark:text-gray-300 truncate">{leader.name}</span>
+                </p>
+              )}
+          </div>
+          <div className="flex items-center">
+              <FileTextIcon className="w-4 h-4 mr-1.5"/>
+              <span>{proposal.documents.length} documento(s)</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMembers, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
   const [searchQuery, setSearchQuery] = useState('');

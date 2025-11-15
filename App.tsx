@@ -457,6 +457,40 @@ const App: React.FC = () => {
       });
   };
 
+  const handleUpdateProposalDetails = (
+    proposalId: string,
+    details: { title: string; description: string; deadline: Date }
+  ) => {
+    setProposals(prevProposals => {
+      const updatedProposals = prevProposals.map(p => {
+        if (p.id === proposalId) {
+          const newEntry: ProposalHistoryEntry = {
+            id: `hist-${Date.now()}`,
+            type: 'general',
+            description: 'Se actualizaron los detalles de la propuesta (título, descripción o fecha límite).',
+            timestamp: new Date(),
+          };
+          return { 
+            ...p,
+            title: details.title,
+            description: details.description,
+            deadline: details.deadline,
+            history: [newEntry, ...(p.history || [])] 
+          };
+        }
+        return p;
+      });
+  
+      if (selectedProposal && selectedProposal.id === proposalId) {
+        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+      }
+  
+      addNotification(`Se actualizaron los detalles de la propuesta "${details.title}".`, proposalId);
+  
+      return updatedProposals;
+    });
+  };
+
   const handleAddComment = (proposalId: string, authorId: string, text: string) => {
     setProposals(prevProposals => {
         const updatedProposals = prevProposals.map(p => {
@@ -598,6 +632,7 @@ const App: React.FC = () => {
             onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })}
             onUpdateStatus={handleStatusChangeRequest}
             onUpdateProposalLeader={handleUpdateProposalLeader}
+            onUpdateProposalDetails={handleUpdateProposalDetails}
             onAssignMember={handleAssignMember}
             onUnassignMember={handleUnassignMember}
             onUpdateAssignedHours={handleUpdateAssignedHours}

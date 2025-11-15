@@ -148,3 +148,9 @@ export const MagnifyingGlassIcon: React.FC<IconProps> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
     </svg>
 );
+
+export const FireIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.362-3.797A8.33 8.33 0 0112 2.25c.879 0 1.724.223 2.5.632l2.368-1.285A8.287 8.287 0 0012 2.25 8.287 8.287 0 006.038 7.048c-1.152 2.56-1.344 4.98-.644 6.662a8.261 8.261 0 0012.23-6.662c.414-1.25.1-2.943-.644-4.286a8.33 8.33 0 01-2.585-2.541z" />
+    </svg>
+);

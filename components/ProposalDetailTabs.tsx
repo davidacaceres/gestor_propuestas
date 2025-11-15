@@ -21,6 +21,7 @@ const historyTypeMap: Record<ProposalHistoryEntryType, { icon: React.FC<{classNa
   status: { icon: TagIcon, color: 'text-blue-500' },
   document: { icon: DocumentIcon, color: 'text-indigo-500' },
   team: { icon: UserGroupIcon, color: 'text-purple-500' },
+  general: { icon: PencilIcon, color: 'text-amber-500' },
 };
 
 const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamMembers, onUploadNew, onUploadVersion, onViewHistory, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment }) => {

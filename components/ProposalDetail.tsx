@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Proposal, Client, TeamMember, ProposalStatus, Document } from '../types';
-import { ArrowLeftIcon, ClockIcon, ArchiveBoxIcon, ArrowUturnLeftIcon } from './Icon';
+import { ArrowLeftIcon, ClockIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, PencilIcon } from './Icon';
 import ProposalDetailTabs from './ProposalDetailTabs';
 
 interface ProposalDetailProps {
@@ -13,6 +13,7 @@ interface ProposalDetailProps {
   onViewHistory: (document: Document) => void;
   onUpdateStatus: (proposalId: string, status: ProposalStatus) => void;
   onUpdateProposalLeader: (proposalId: string, leaderId: string) => void;
+  onUpdateProposalDetails: (proposalId: string, details: { title: string; description: string; deadline: Date }) => void;
   onAssignMember: (proposalId: string, memberId: string, hours: number) => void;
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
@@ -28,10 +29,40 @@ const statusClasses: Record<ProposalStatus, string> = {
 };
 
 const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
-  const { proposal, clients, teamMembers, onBack, onUpdateStatus, onUpdateProposalLeader } = props;
+  const { proposal, clients, teamMembers, onBack, onUpdateStatus, onUpdateProposalLeader, onUpdateProposalDetails } = props;
+  
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(proposal.title);
+  const [editedDescription, setEditedDescription] = useState(proposal.description);
+  const [editedDeadline, setEditedDeadline] = useState(proposal.deadline.toISOString().split('T')[0]);
+
   const isArchived = proposal.status === 'Archivado';
   const client = clients.find(c => c.id === proposal.clientId);
   const leader = proposal.leaderId ? teamMembers.find(tm => tm.id === proposal.leaderId) : null;
+  
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditedTitle(proposal.title);
+    setEditedDescription(proposal.description);
+    setEditedDeadline(proposal.deadline.toISOString().split('T')[0]);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
+
+  const handleSave = () => {
+    const [year, month, day] = editedDeadline.split('-').map(Number);
+    // Note: JS month is 0-indexed, so month - 1
+    const deadlineDate = new Date(Date.UTC(year, month - 1, day));
+    
+    onUpdateProposalDetails(proposal.id, {
+      title: editedTitle,
+      description: editedDescription,
+      deadline: deadlineDate,
+    });
+    setIsEditing(false);
+  };
 
   return (
     <div>
@@ -46,14 +77,48 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
         {/* Header/Summary Section */}
         <div className="p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
           <div className="md:flex justify-between items-start">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{proposal.title}</h2>
+            <div className="flex-1 min-w-0 pr-6">
+              {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    className="text-3xl font-bold text-gray-900 dark:text-gray-100 bg-transparent border-b-2 border-primary-500 focus:outline-none w-full"
+                  />
+                ) : (
+                  <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{proposal.title}</h2>
+              )}
               <p className="mt-2 text-sm text-gray-700 dark:text-gray-400">
                 Cliente: <span className="font-semibold text-gray-800 dark:text-gray-200">{client?.companyName || 'N/A'}</span>
               </p>
-              <p className="mt-4 text-sm text-gray-700 dark:text-gray-300 max-w-2xl">{proposal.description}</p>
+               {isEditing ? (
+                <textarea
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  rows={3}
+                  className="mt-4 text-sm text-gray-700 dark:text-gray-300 w-full max-w-2xl bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              ) : (
+                <p className="mt-4 text-sm text-gray-700 dark:text-gray-300 max-w-2xl">{proposal.description}</p>
+              )}
             </div>
-            <div className="mt-4 md:mt-0 md:ml-6 flex-shrink-0">
+            <div className="mt-4 md:mt-0 md:ml-6 flex-shrink-0 w-full md:w-64">
+              <div className="mb-4">
+                {isEditing ? (
+                  <div className="flex space-x-3">
+                    <button onClick={handleSave} className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700">Guardar Cambios</button>
+                    <button onClick={handleCancel} className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
+                  </div>
+                ) : (
+                  !isArchived && proposal.status === 'Borrador' && (
+                    <button onClick={handleEdit} className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                      <PencilIcon className="w-5 h-5 mr-2 -ml-1" />
+                      Editar Propuesta
+                    </button>
+                  )
+                )}
+              </div>
+              
               {isArchived ? (
                 <div className="flex flex-col items-end">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusClasses[proposal.status]}`}>
@@ -77,8 +142,9 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                     id="status"
                     name="status"
                     value={proposal.status}
+                    disabled={isEditing}
                     onChange={(e) => onUpdateStatus(proposal.id, e.target.value as ProposalStatus)}
-                    className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md font-medium dark:border-gray-600 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500 ${statusClasses[proposal.status]}`}
+                    className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md font-medium dark:border-gray-600 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed ${statusClasses[proposal.status]}`}
                   >
                     <option value="Borrador">Borrador</option>
                     <option value="Enviado">Enviado</option>
@@ -97,8 +163,9 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                           id="leader"
                           name="leader"
                           value={proposal.leaderId || ''}
+                          disabled={isEditing}
                           onChange={(e) => onUpdateProposalLeader(proposal.id, e.target.value)}
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                           <option value="" disabled>Selecciona un líder</option>
                           {teamMembers.map(member => (
@@ -109,10 +176,20 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
               </div>
               <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 space-y-1 text-right">
                 <p>Creado: {proposal.createdAt.toLocaleDateString('es-ES')}</p>
-                <p className="flex items-center justify-end">
+                <div className="flex items-center justify-end">
                   <ClockIcon className="w-4 h-4 mr-1.5" />
-                  <span>Fecha límite: <span className="font-semibold dark:text-gray-300">{proposal.deadline.toLocaleDateString('es-ES')}</span></span>
-                </p>
+                  <span>Fecha límite:</span>
+                   {isEditing ? (
+                    <input
+                      type="date"
+                      value={editedDeadline}
+                      onChange={(e) => setEditedDeadline(e.target.value)}
+                      className="font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 ml-1 text-sm"
+                    />
+                  ) : (
+                    <span className="font-semibold dark:text-gray-300 ml-1">{proposal.deadline.toLocaleDateString('es-ES')}</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

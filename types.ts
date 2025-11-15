@@ -34,7 +34,7 @@ export type AssignedMember = {
   assignedHours: number;
 };
 
-export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'team';
+export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'team' | 'general';
 
 export type ProposalHistoryEntry = {
   id: string;
