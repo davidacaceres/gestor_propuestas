@@ -1,5 +1,6 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
-import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification } from './types';
+import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry } from './types';
 import Header from './components/Header';
 import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
@@ -54,6 +55,10 @@ const initialProposals: Proposal[] = [
       { memberId: 'team-1', assignedHours: 40 },
       { memberId: 'team-2', assignedHours: 80 },
     ],
+    history: [
+        { id: 'hist-1-1', type: 'status', description: 'Estado cambiado de "Borrador" a "Enviado".', timestamp: new Date(2023, 10, 17) },
+        { id: 'hist-1-2', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 10, 15) },
+    ],
   },
   {
     id: 'prop-2',
@@ -66,6 +71,9 @@ const initialProposals: Proposal[] = [
     documents: [],
     assignedTeam: [
       { memberId: 'team-4', assignedHours: 60 },
+    ],
+    history: [
+       { id: 'hist-2-1', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 11, 5) },
     ],
   },
   {
@@ -87,6 +95,9 @@ const initialProposals: Proposal[] = [
       },
     ],
     assignedTeam: [],
+    history: [
+       { id: 'hist-3-1', type: 'creation', description: 'Propuesta creada.', timestamp: new Date() },
+    ],
   },
 ];
 
@@ -148,6 +159,14 @@ const App: React.FC = () => {
       createdAt: new Date(),
       documents: [],
       assignedTeam: [],
+      history: [
+        {
+          id: `hist-${Date.now()}`,
+          type: 'creation',
+          description: 'Propuesta creada.',
+          timestamp: new Date(),
+        }
+      ],
     };
     setProposals(prev => [newProposal, ...prev]);
     setModalState({ type: null });
@@ -167,83 +186,112 @@ const App: React.FC = () => {
 
   const handleAddOrUpdateDocument = (proposalId: string, documentData: { name: string; file: { name: string; content: string }; notes: string }, documentId?: string) => {
     let proposalTitle = '';
-    const updatedProposals = proposals.map(p => {
-      if (p.id === proposalId) {
-        proposalTitle = p.title;
-        const newVersion: DocumentVersion = {
-          versionNumber: 1, // Default for new docs
-          fileName: documentData.file.name,
-          fileContent: documentData.file.content,
-          createdAt: new Date(),
-          notes: documentData.notes,
-        };
+    
+    setProposals(prevProposals => {
+        const updatedProposals = prevProposals.map(p => {
+            if (p.id === proposalId) {
+                proposalTitle = p.title;
+                const newVersion: DocumentVersion = {
+                    versionNumber: 1,
+                    fileName: documentData.file.name,
+                    fileContent: documentData.file.content,
+                    createdAt: new Date(),
+                    notes: documentData.notes,
+                };
 
-        let updatedDocuments: Document[];
+                let updatedDocuments: Document[];
+                let historyDescription = '';
 
-        if (documentId) { // Update existing document
-          updatedDocuments = p.documents.map(d => {
-            if (d.id === documentId) {
-              const latestVersionNumber = d.versions[0]?.versionNumber || 0;
-              newVersion.versionNumber = latestVersionNumber + 1;
-              return { ...d, versions: [newVersion, ...d.versions] };
+                if (documentId) { // Update
+                    updatedDocuments = p.documents.map(d => {
+                        if (d.id === documentId) {
+                            const latestVersionNumber = d.versions[0]?.versionNumber || 0;
+                            newVersion.versionNumber = latestVersionNumber + 1;
+                            return { ...d, versions: [newVersion, ...d.versions] };
+                        }
+                        return d;
+                    });
+                    historyDescription = `Nueva versión subida para el documento: "${documentData.name}".`;
+                } else { // Add new
+                    const newDocument: Document = {
+                        id: `doc-${Date.now()}`,
+                        name: documentData.name,
+                        createdAt: new Date(),
+                        versions: [newVersion],
+                    };
+                    updatedDocuments = [...p.documents, newDocument];
+                    historyDescription = `Nuevo documento añadido: "${documentData.name}".`;
+                }
+                
+                const newEntry: ProposalHistoryEntry = {
+                    id: `hist-${Date.now()}`,
+                    type: 'document',
+                    description: historyDescription,
+                    timestamp: new Date(),
+                };
+
+                return { ...p, documents: updatedDocuments, history: [newEntry, ...(p.history || [])] };
             }
-            return d;
-          });
-        } else { // Add new document
-          const newDocument: Document = {
-            id: `doc-${Date.now()}`,
-            name: documentData.name,
-            createdAt: new Date(),
-            versions: [newVersion],
-          };
-          updatedDocuments = [...p.documents, newDocument];
-        }
-        return { ...p, documents: updatedDocuments };
-      }
-      return p;
+            return p;
+        });
+        
+        const updatedSelectedProposal = updatedProposals.find(p => p.id === proposalId) || null;
+        setSelectedProposal(updatedSelectedProposal);
+        setModalState({ type: null });
+
+        const notifMsg = documentId
+            ? `Se subió una nueva versión a "${documentData.name}" en la propuesta "${proposalTitle}".`
+            : `Se añadió el documento "${documentData.name}" a la propuesta "${proposalTitle}".`;
+        addNotification(notifMsg, proposalId);
+        
+        return updatedProposals;
     });
-
-    setProposals(updatedProposals);
-    const updatedSelectedProposal = updatedProposals.find(p => p.id === proposalId) || null;
-    setSelectedProposal(updatedSelectedProposal);
-    setModalState({ type: null });
-
-    const notifMsg = documentId
-      ? `Se subió una nueva versión a "${documentData.name}" en la propuesta "${proposalTitle}".`
-      : `Se añadió el documento "${documentData.name}" a la propuesta "${proposalTitle}".`;
-    addNotification(notifMsg, proposalId);
   };
   
   const handleConfirmStatusChange = (proposalId: string, status: ProposalStatus) => {
-    const originalProposal = proposals.find(p => p.id === proposalId);
-    if (!originalProposal) return;
-    
-    if (originalProposal.status === status) return;
+      const originalProposal = proposals.find(p => p.id === proposalId);
+      if (!originalProposal) return;
+      
+      if (originalProposal.status === status) return;
 
-    const wasArchived = originalProposal.status === 'Archivado';
-    const isNowArchived = status === 'Archivado';
-    
-    const isArchiving = !wasArchived && isNowArchived;
-    const isUnarchiving = wasArchived && !isNowArchived;
+      const wasArchived = originalProposal.status === 'Archivado';
+      const isNowArchived = status === 'Archivado';
+      
+      const isArchiving = !wasArchived && isNowArchived;
+      const isUnarchiving = wasArchived && !isNowArchived;
 
-    const updatedProposals = proposals.map(p =>
-      p.id === proposalId ? { ...p, status } : p
-    );
-    setProposals(updatedProposals);
+      setProposals(prevProposals => {
+          const updatedProposals = prevProposals.map(p => {
+              if (p.id === proposalId) {
+                  const newEntry: ProposalHistoryEntry = {
+                      id: `hist-${Date.now()}`,
+                      type: 'status',
+                      description: `Estado cambiado de "${originalProposal.status}" a "${status}".`,
+                      timestamp: new Date(),
+                  };
+                  return { ...p, status, history: [newEntry, ...(p.history || [])] };
+              }
+              return p;
+          });
+          
+          addNotification(`El estado de "${originalProposal.title}" cambió a ${status}.`, proposalId);
 
-    addNotification(`El estado de "${originalProposal.title}" cambió a ${status}.`, proposalId);
-
-    if (isArchiving) {
-      setSelectedProposal(null);
-    } else if (isUnarchiving) {
-      setShowArchived(false);
-      setSelectedProposal(null);
-    } else {
-      if (selectedProposal && selectedProposal.id === proposalId) {
-        setSelectedProposal(prev => (prev ? { ...prev, status } : null));
-      }
-    }
+          if (isArchiving) {
+              setSelectedProposal(null);
+          } else if (isUnarchiving) {
+              setShowArchived(false);
+              setSelectedProposal(null);
+          } else {
+              if (selectedProposal && selectedProposal.id === proposalId) {
+                  const updatedProposal = updatedProposals.find(up => up.id === proposalId);
+                  setSelectedProposal(updatedProposal || null);
+              }
+          }
+          
+          return updatedProposals;
+      });
   };
+
 
   const handleStatusChangeRequest = (proposalId: string, newStatus: ProposalStatus) => {
     const proposal = proposals.find(p => p.id === proposalId);
@@ -278,54 +326,94 @@ const App: React.FC = () => {
   };
 
   const handleAssignMember = (proposalId: string, memberId: string, hours: number) => {
-    const updatedProposals = proposals.map(p => {
-        if (p.id === proposalId) {
-            const newAssignment: AssignedMember = { memberId, assignedHours: hours };
-            if (p.assignedTeam.some(m => m.memberId === memberId)) {
-                return p;
-            }
-            return { ...p, assignedTeam: [...p.assignedTeam, newAssignment] };
-        }
-        return p;
-    });
+    const member = teamMembers.find(tm => tm.id === memberId);
+    if (!member) return;
 
-    setProposals(updatedProposals);
-    if (selectedProposal && selectedProposal.id === proposalId) {
-        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
-    }
+    setProposals(prevProposals => {
+        const updatedProposals = prevProposals.map(p => {
+            if (p.id === proposalId) {
+                if (p.assignedTeam.some(m => m.memberId === memberId)) {
+                    return p;
+                }
+                const newAssignment: AssignedMember = { memberId, assignedHours: hours };
+                const newEntry: ProposalHistoryEntry = {
+                    id: `hist-${Date.now()}`,
+                    type: 'team',
+                    description: `"${member.name}" fue asignado al equipo con ${hours} horas.`,
+                    timestamp: new Date(),
+                };
+                return { ...p, assignedTeam: [...p.assignedTeam, newAssignment], history: [newEntry, ...(p.history || [])] };
+            }
+            return p;
+        });
+
+        if (selectedProposal && selectedProposal.id === proposalId) {
+            setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+        }
+        
+        return updatedProposals;
+    });
   };
 
   const handleUnassignMember = (proposalId: string, memberId: string) => {
-    const updatedProposals = proposals.map(p => {
-        if (p.id === proposalId) {
-            return {
-                ...p,
-                assignedTeam: p.assignedTeam.filter(m => m.memberId !== memberId)
-            };
-        }
-        return p;
-    });
-    setProposals(updatedProposals);
-    if (selectedProposal && selectedProposal.id === proposalId) {
-        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
-    }
+      const member = teamMembers.find(tm => tm.id === memberId);
+      if (!member) return;
+      
+      setProposals(prevProposals => {
+          const updatedProposals = prevProposals.map(p => {
+              if (p.id === proposalId) {
+                  const newEntry: ProposalHistoryEntry = {
+                      id: `hist-${Date.now()}`,
+                      type: 'team',
+                      description: `"${member.name}" fue quitado del equipo.`,
+                      timestamp: new Date(),
+                  };
+                  return {
+                      ...p,
+                      assignedTeam: p.assignedTeam.filter(m => m.memberId !== memberId),
+                      history: [newEntry, ...(p.history || [])]
+                  };
+              }
+              return p;
+          });
+
+          if (selectedProposal && selectedProposal.id === proposalId) {
+              setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+          }
+          
+          return updatedProposals;
+      });
   };
   
   const handleUpdateAssignedHours = (proposalId: string, memberId: string, hours: number) => {
-    const updatedProposals = proposals.map(p => {
-        if (p.id === proposalId) {
-            const updatedTeam = p.assignedTeam.map(m =>
-                m.memberId === memberId ? { ...m, assignedHours: hours } : m
-            );
-            return { ...p, assignedTeam: updatedTeam };
-        }
-        return p;
-    });
+      const member = teamMembers.find(tm => tm.id === memberId);
+      if (!member) return;
 
-    setProposals(updatedProposals);
-    if (selectedProposal && selectedProposal.id === proposalId) {
-        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
-    }
+      setProposals(prevProposals => {
+          const updatedProposals = prevProposals.map(p => {
+              if (p.id === proposalId) {
+                  const oldAssignment = p.assignedTeam.find(m => m.memberId === memberId);
+                  const oldHours = oldAssignment ? oldAssignment.assignedHours : '?';
+                  const newEntry: ProposalHistoryEntry = {
+                      id: `hist-${Date.now()}`,
+                      type: 'team',
+                      description: `Horas de "${member.name}" actualizadas de ${oldHours} a ${hours}.`,
+                      timestamp: new Date(),
+                  };
+                  const updatedTeam = p.assignedTeam.map(m =>
+                      m.memberId === memberId ? { ...m, assignedHours: hours } : m
+                  );
+                  return { ...p, assignedTeam: updatedTeam, history: [newEntry, ...(p.history || [])] };
+              }
+              return p;
+          });
+
+          if (selectedProposal && selectedProposal.id === proposalId) {
+              setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+          }
+          
+          return updatedProposals;
+      });
   };
   
   const handleMarkNotificationAsRead = (notificationId: string) => {
@@ -622,7 +710,7 @@ interface UploadDocumentFormProps {
   proposalId: string;
   documentId?: string;
   documentName?: string;
-  onSubmit: (proposalId: string, data: { name: string; file: { name: string, content: string }; notes: string }, documentId?: string) => void;
+  onSubmit: (proposalId: string, data: { name: string; file: { name: string; content: string; }; notes: string; }, documentId?: string) => void;
   onCancel: () => void;
 }
 

@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
-import { Proposal, Document, ProposalStatus, Client, TeamMember } from '../types';
-import { ArrowLeftIcon, PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, DownloadIcon, ClockIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon } from './Icon';
+import { Proposal, Document, ProposalStatus, Client, TeamMember, ProposalHistoryEntryType } from '../types';
+import { ArrowLeftIcon, PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, DownloadIcon, ClockIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon } from './Icon';
 
 interface ProposalDetailProps {
   proposal: Proposal;
@@ -24,6 +23,14 @@ const statusClasses: Record<ProposalStatus, string> = {
   'Rechazado': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
   'Archivado': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 };
+
+const historyTypeMap: Record<ProposalHistoryEntryType, { icon: React.FC<{className?: string}>; color: string }> = {
+  creation: { icon: PlusCircleIcon, color: 'text-green-500' },
+  status: { icon: TagIcon, color: 'text-blue-500' },
+  document: { icon: DocumentIcon, color: 'text-indigo-500' },
+  team: { icon: UserGroupIcon, color: 'text-purple-500' },
+};
+
 
 const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, teamMembers, onBack, onUploadNew, onUploadVersion, onViewHistory, onUpdateStatus, onAssignMember, onUnassignMember, onUpdateAssignedHours }) => {
   const isArchived = proposal.status === 'Archivado';
@@ -86,7 +93,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
   };
   
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg">
+    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
       <div className="p-6 sm:p-8">
         <div className="mb-6">
           <button onClick={onBack} className="flex items-center text-sm font-medium text-gray-600 hover:text-primary-600 dark:text-gray-300 dark:hover:text-primary-400 transition-colors">
@@ -147,7 +154,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
       </div>
       
       {client && (
-        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-6 sm:px-8 py-4">
+        <div className="bg-gray-50 dark:bg-gray-800/50 px-6 sm:px-8 py-4">
             <h3 className="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100">Información del Cliente</h3>
             <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-3">
                 <div className="sm:col-span-1">
@@ -167,7 +174,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
         </div>
       )}
 
-      <div className="border-t border-gray-200 dark:border-gray-700 p-6 sm:p-8">
+      <div className="p-6 sm:p-8">
         <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Equipo Asignado</h3>
@@ -262,7 +269,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
             </div>
         </div>
 
-        <div className="border-t dark:border-gray-700 p-6 sm:p-8">
+        <div className="p-6 sm:p-8">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Documentos</h3>
             {!isArchived && (
@@ -338,6 +345,44 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
                   </div>
               </div>
           </div>
+        </div>
+        
+        <div className="p-6 sm:p-8">
+            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Historial de Actividad</h3>
+            <div className="flow-root">
+                <ul role="list" className="-mb-8">
+                    {proposal.history?.map((entry, entryIdx) => {
+                        const { icon: IconComponent, color } = historyTypeMap[entry.type];
+                        return (
+                        <li key={entry.id}>
+                            <div className="relative pb-8">
+                            {entryIdx !== proposal.history.length - 1 ? (
+                                <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
+                            ) : null}
+                            <div className="relative flex space-x-4">
+                                <div>
+                                <span className={`h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ring-8 ring-white dark:ring-gray-800`}>
+                                    <IconComponent className={`h-5 w-5 ${color}`} aria-hidden="true" />
+                                </span>
+                                </div>
+                                <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                                <div>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">{entry.description}</p>
+                                </div>
+                                <div className="whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400">
+                                    <time dateTime={entry.timestamp.toISOString()}>{entry.timestamp.toLocaleString('es-ES')}</time>
+                                </div>
+                                </div>
+                            </div>
+                            </div>
+                        </li>
+                        )
+                    })}
+                    {(!proposal.history || proposal.history.length === 0) && (
+                        <p className="text-center py-4 text-gray-500 dark:text-gray-400">No hay actividad registrada.</p>
+                    )}
+                </ul>
+            </div>
         </div>
       </div>
     </div>

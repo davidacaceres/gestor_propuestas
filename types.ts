@@ -34,6 +34,15 @@ export type AssignedMember = {
   assignedHours: number;
 };
 
+export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'team';
+
+export type ProposalHistoryEntry = {
+  id: string;
+  type: ProposalHistoryEntryType;
+  description: string;
+  timestamp: Date;
+};
+
 export type Proposal = {
   id: string;
   title: string;
@@ -44,6 +53,7 @@ export type Proposal = {
   createdAt: Date;
   documents: Document[];
   assignedTeam: AssignedMember[];
+  history: ProposalHistoryEntry[];
 };
 
 export type Notification = {
