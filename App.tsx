@@ -6,8 +6,11 @@ import ProposalDetail from './components/ProposalDetail';
 import ClientList from './components/ClientList';
 import ClientDetail from './components/ClientDetail';
 import Modal from './components/Modal';
-import { PlusIcon, UploadIcon, XIcon, DownloadIcon, ExclamationTriangleIcon } from './components/Icon';
-import NotificationsPanel from './components/NotificationsPanel';
+import CreateProposalForm from './components/CreateProposalForm';
+import CreateClientForm from './components/CreateClientForm';
+import UploadDocumentForm from './components/UploadDocumentForm';
+import DocumentHistory from './components/DocumentHistory';
+import ConfirmationDialog from './components/ConfirmationDialog';
 
 const initialClients: Client[] = [
   { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
@@ -337,7 +340,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUpdateProposalLeader = (proposalId: string, leaderId: string) => {
+  const handleConfirmLeaderChange = (proposalId: string, leaderId: string) => {
     const leader = teamMembers.find(tm => tm.id === leaderId);
     if (!leader) return;
 
@@ -367,6 +370,25 @@ const App: React.FC = () => {
         }
         
         return updatedProposals;
+    });
+  };
+
+  const handleLeaderChangeRequest = (proposalId: string, newLeaderId: string) => {
+    const proposal = proposals.find(p => p.id === proposalId);
+    const newLeader = teamMembers.find(tm => tm.id === newLeaderId);
+
+    if (!proposal || !newLeader || proposal.leaderId === newLeaderId) {
+      return;
+    }
+
+    setModalState({
+      type: 'confirmAction',
+      data: {
+        title: 'Reasignar Líder de Propuesta',
+        message: `¿Estás seguro de que quieres reasignar el líder de la propuesta a "${newLeader.name}"?`,
+        confirmText: 'Reasignar',
+        onConfirm: () => handleConfirmLeaderChange(proposalId, newLeaderId),
+      }
     });
   };
 
@@ -652,7 +674,7 @@ const App: React.FC = () => {
             onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })}
             onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })}
             onUpdateStatus={handleStatusChangeRequest}
-            onUpdateProposalLeader={handleUpdateProposalLeader}
+            onUpdateProposalLeader={handleLeaderChangeRequest}
             onUpdateProposalDetails={handleUpdateProposalDetails}
             onAssignMember={handleAssignMember}
             onUnassignMember={handleUnassignMember}
@@ -717,333 +739,5 @@ const App: React.FC = () => {
     </div>
   );
 };
-
-// Modal Content Components
-
-interface CreateProposalFormProps {
-  clients: Client[];
-  onSubmit: (title: string, clientId: string, description: string, deadline: Date, alertDate?: Date) => void;
-  onCancel: () => void;
-}
-
-const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ clients, onSubmit, onCancel }) => {
-  const [title, setTitle] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [description, setDescription] = useState('');
-  const [deadline, setDeadline] = useState('');
-  const [alertDate, setAlertDate] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (title.trim() && clientId && description.trim() && deadline) {
-      const deadlineDate = new Date(deadline);
-      const alertDateObj = alertDate ? new Date(alertDate) : undefined;
-
-      deadlineDate.setMinutes(deadlineDate.getMinutes() + deadlineDate.getTimezoneOffset());
-      if (alertDateObj) {
-        alertDateObj.setMinutes(alertDateObj.getMinutes() + alertDateObj.getTimezoneOffset());
-      }
-      
-      if (alertDateObj && alertDateObj >= deadlineDate) {
-        setError('La fecha de alerta debe ser anterior a la fecha límite.');
-        return;
-      }
-
-      const deadlineUtc = new Date(Date.UTC(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate()));
-      const alertDateUtc = alertDateObj ? new Date(Date.UTC(alertDateObj.getFullYear(), alertDateObj.getMonth(), alertDateObj.getDate())) : undefined;
-      
-      onSubmit(title, clientId, description, deadlineUtc, alertDateUtc);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Nueva Propuesta</h2>
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título de la Propuesta</label>
-          <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
-        </div>
-        <div>
-          <label htmlFor="client" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cliente</label>
-          <select id="client" value={clientId} onChange={e => setClientId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
-            <option value="" disabled>Selecciona un cliente</option>
-            {clients.map(client => (
-              <option key={client.id} value={client.id}>{client.companyName}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
-          <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required></textarea>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-            <div>
-                <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Límite</label>
-                <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
-            </div>
-            <div>
-                <label htmlFor="alertDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de Alerta (Opcional)</label>
-                <input type="date" id="alertDate" value={alertDate} onChange={e => setAlertDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
-            </div>
-        </div>
-      </div>
-      <div className="mt-8 flex justify-end space-x-3">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
-        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center">
-          <PlusIcon className="w-5 h-5 mr-2" />
-          Crear Propuesta
-        </button>
-      </div>
-    </form>
-  );
-};
-
-
-interface CreateClientFormProps {
-  onSubmit: (companyName: string, contactName: string, contactEmail: string, contactPhone: string) => void;
-  onCancel: () => void;
-}
-
-const CreateClientForm: React.FC<CreateClientFormProps> = ({ onSubmit, onCancel }) => {
-  const [companyName, setCompanyName] = useState('');
-  const [contactName, setContactName] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactPhone, setContactPhone] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (companyName.trim() && contactName.trim() && contactEmail.trim() && contactPhone.trim()) {
-      onSubmit(companyName, contactName, contactEmail, contactPhone);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Nuevo Cliente</h2>
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresa</label>
-          <input type="text" id="companyName" value={companyName} onChange={e => setCompanyName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
-        </div>
-        <div>
-          <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre de Contacto</label>
-          <input type="text" id="contactName" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
-        </div>
-        <div>
-          <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email de Contacto</label>
-          <input type="email" id="contactEmail" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
-        </div>
-        <div>
-          <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono de Contacto</label>
-          <input type="tel" id="contactPhone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
-        </div>
-      </div>
-      <div className="mt-8 flex justify-end space-x-3">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
-        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center">
-          <PlusIcon className="w-5 h-5 mr-2" />
-          Crear Cliente
-        </button>
-      </div>
-    </form>
-  );
-};
-
-
-interface UploadDocumentFormProps {
-  proposalId: string;
-  documentId?: string;
-  documentName?: string;
-  onSubmit: (proposalId: string, data: { name: string; file: { name: string; content: string; }; notes: string; }, documentId?: string) => void;
-  onCancel: () => void;
-}
-
-const UploadDocumentForm: React.FC<UploadDocumentFormProps> = ({ proposalId, documentId, documentName, onSubmit, onCancel }) => {
-  const [name, setName] = useState('');
-  const [file, setFile] = useState<{name: string, content: string} | null>(null);
-  const [notes, setNotes] = useState('');
-
-  const isNewVersion = !!documentId;
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setFile({ name: f.name, content: event.target?.result as string });
-      };
-      reader.readAsDataURL(f);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (file && (isNewVersion || name.trim())) {
-      onSubmit(proposalId, { name: isNewVersion ? documentName! : name, file, notes }, documentId);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">{isNewVersion ? `Nueva Versión para "${documentName}"` : 'Añadir Nuevo Documento'}</h2>
-      <div className="space-y-4">
-        {!isNewVersion && (
-          <div>
-            <label htmlFor="docName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre del Documento</label>
-            <input type="text" id="docName" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
-          </div>
-        )}
-        <div>
-           <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Archivo</label>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md dark:border-gray-600">
-            <div className="space-y-1 text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              <div className="flex text-sm text-gray-600 dark:text-gray-400">
-                <label htmlFor="file-upload" className="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
-                  <span>Subir un archivo</span>
-                  <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} required />
-                </label>
-                <p className="pl-1">o arrastrar y soltar</p>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-500">{file ? file.name : 'PNG, JPG, PDF, etc.'}</p>
-            </div>
-          </div>
-        </div>
-        <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas de la Versión</label>
-          <textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder={isNewVersion ? 'Ej: Correcciones basadas en feedback.' : 'Ej: Versión inicial del documento.'} required></textarea>
-        </div>
-      </div>
-      <div className="mt-8 flex justify-end space-x-3">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
-        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center">
-          <UploadIcon className="w-5 h-5 mr-2" />
-          {isNewVersion ? 'Subir Versión' : 'Añadir Documento'}
-        </button>
-      </div>
-    </form>
-  );
-};
-
-
-interface DocumentHistoryProps {
-    document: Document;
-    onCancel: () => void;
-}
-
-const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document: doc, onCancel }) => {
-    
-    const handleDownload = (version: DocumentVersion) => {
-        if (!version.fileContent) {
-            alert('El contenido del archivo no está disponible para descargar.');
-            return;
-        }
-        const link = window.document.createElement('a');
-        link.href = version.fileContent;
-        link.download = version.fileName;
-        window.document.body.appendChild(link);
-        link.click();
-        window.document.body.removeChild(link);
-    };
-
-    return (
-        <div>
-            <div className="flex justify-between items-start">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Historial de Versiones</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">"{doc.name}"</p>
-                </div>
-                <button onClick={onCancel} className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:hover:bg-gray-700 dark:hover:text-gray-300">
-                    <XIcon className="w-6 h-6" />
-                </button>
-            </div>
-            <div className="mt-6 flow-root">
-                <ul role="list" className="-mb-8 max-h-[60vh] overflow-y-auto pr-4">
-                    {doc.versions.map((version, versionIdx) => (
-                        <li key={version.versionNumber}>
-                            <div className="relative pb-8">
-                                {versionIdx !== doc.versions.length - 1 ? (
-                                    <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
-                                ) : null}
-                                <div className="relative flex space-x-3 items-start">
-                                    <div>
-                                        <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-gray-800 ${versionIdx === 0 ? 'bg-primary-500' : 'bg-gray-400'}`}>
-                                            <span className="text-white font-bold text-sm">V{version.versionNumber}</span>
-                                        </span>
-                                    </div>
-                                    <div className="flex-1 min-w-0 pt-1.5">
-                                        <div className="flex justify-between items-center text-sm">
-                                            <p className="text-gray-500 dark:text-gray-400">
-                                                {new Date(version.createdAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                            </p>
-                                            <div className="flex items-center gap-x-3">
-                                                <p className="font-medium text-gray-700 dark:text-gray-300 truncate" title={version.fileName}>{version.fileName}</p>
-                                                <button onClick={() => handleDownload(version)} className="text-primary-600 hover:text-primary-800 transition-colors dark:text-primary-400 dark:hover:text-primary-300" title={`Descargar ${version.fileName}`}>
-                                                    <DownloadIcon className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
-                                            <p className="text-sm text-gray-800 dark:text-gray-200">{version.notes}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        </div>
-    );
-};
-
-interface ConfirmationDialogProps {
-    title: string;
-    message: string;
-    onConfirm: () => void;
-    onCancel: () => void;
-    confirmText?: string;
-    cancelText?: string;
-}
-
-const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar", cancelText = "Cancelar" }) => {
-    return (
-        <div>
-            <div className="sm:flex sm:items-start">
-                <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-primary-900/50">
-                    <ExclamationTriangleIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
-                </div>
-                <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                    <h2 className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100" id="modal-title">{title}</h2>
-                    <div className="mt-2">
-                        <p className="text-sm text-gray-500 dark:text-gray-300">{message}</p>
-                    </div>
-                </div>
-            </div>
-            <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                <button
-                    type="button"
-                    onClick={onConfirm}
-                    className="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 sm:ml-3 sm:w-auto"
-                >
-                    {confirmText}
-                </button>
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto dark:bg-gray-700 dark:text-gray-200 dark:ring-gray-600 dark:hover:bg-gray-600"
-                >
-                    {cancelText}
-                </button>
-            </div>
-        </div>
-    );
-};
-
 
 export default App;
