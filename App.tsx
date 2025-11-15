@@ -13,6 +13,8 @@ import CreateTeamMemberForm from './components/CreateTeamMemberForm';
 import UploadDocumentForm from './components/UploadDocumentForm';
 import DocumentHistory from './components/DocumentHistory';
 import ConfirmationDialog from './components/ConfirmationDialog';
+import EditClientForm from './components/EditClientForm';
+import EditTeamMemberForm from './components/EditTeamMemberForm';
 
 const initialClients: Client[] = [
   { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
@@ -201,6 +203,20 @@ const App: React.FC = () => {
     setModalState({ type: null });
   };
 
+  const handleUpdateClient = (clientId: string, data: Omit<Client, 'id'>) => {
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...data } : c));
+    setModalState({ type: null });
+  };
+
+  const handleDeleteClient = (clientId: string) => {
+    const isClientInUse = proposals.some(p => p.clientId === clientId);
+    if (isClientInUse) {
+      alert('No se puede eliminar este cliente porque está asociado a una o más propuestas.');
+      return;
+    }
+    setClients(prev => prev.filter(c => c.id !== clientId));
+  };
+
   const handleCreateTeamMember = (name: string, role: string, alias?: string, email?: string) => {
     const newMember: TeamMember = {
       id: `team-${Date.now()}`,
@@ -211,6 +227,22 @@ const App: React.FC = () => {
     };
     setTeamMembers(prev => [newMember, ...prev]);
     setModalState({ type: null });
+  };
+
+  const handleUpdateTeamMember = (memberId: string, data: Omit<TeamMember, 'id'>) => {
+    setTeamMembers(prev => prev.map(tm => tm.id === memberId ? { ...tm, ...data } : tm));
+    setModalState({ type: null });
+  };
+
+  const handleDeleteTeamMember = (memberId: string) => {
+    const isMemberInUse = proposals.some(
+      p => p.leaderId === memberId || p.assignedTeam.some(at => at.memberId === memberId)
+    );
+    if (isMemberInUse) {
+      alert('No se puede eliminar este miembro porque está asignado como líder o participante en una o más propuestas.');
+      return;
+    }
+    setTeamMembers(prev => prev.filter(tm => tm.id !== memberId));
   };
   
   const handleImportTeamMembers = (fileContent: string) => {
@@ -672,8 +704,12 @@ const App: React.FC = () => {
         return <CreateProposalForm clients={clients} onSubmit={handleCreateProposal} onCancel={() => setModalState({ type: null })} />;
       case 'createClient':
         return <CreateClientForm onSubmit={handleCreateClient} onCancel={() => setModalState({ type: null })} />;
+      case 'editClient':
+        return <EditClientForm client={modalState.data.client} onSubmit={handleUpdateClient} onCancel={() => setModalState({ type: null })} />;
       case 'createTeamMember':
         return <CreateTeamMemberForm onSubmit={handleCreateTeamMember} onCancel={() => setModalState({ type: null })} />;
+      case 'editTeamMember':
+        return <EditTeamMemberForm member={modalState.data.member} onSubmit={handleUpdateTeamMember} onCancel={() => setModalState({ type: null })} />;
       case 'uploadDocument':
         return (
           <UploadDocumentForm
@@ -761,6 +797,13 @@ const App: React.FC = () => {
             clients={clients} 
             onSelectClient={handleSelectClient}
             onCreateClient={() => setModalState({ type: 'createClient' })} 
+            onEditClient={(client) => setModalState({ type: 'editClient', data: { client } })}
+            onDeleteClient={(client) => setModalState({ type: 'confirmAction', data: {
+              title: 'Eliminar Cliente',
+              message: `¿Estás seguro de que quieres eliminar a "${client.companyName}"? Esta acción no se puede deshacer.`,
+              confirmText: 'Eliminar',
+              onConfirm: () => handleDeleteClient(client.id)
+            }})}
           />
         );
       case 'team':
@@ -769,6 +812,13 @@ const App: React.FC = () => {
             teamMembers={teamMembers}
             onCreateTeamMember={() => setModalState({ type: 'createTeamMember' })}
             onImportTeamMembers={handleImportTeamMembers}
+            onEditTeamMember={(member) => setModalState({ type: 'editTeamMember', data: { member } })}
+            onDeleteTeamMember={(member) => setModalState({ type: 'confirmAction', data: {
+              title: 'Eliminar Miembro',
+              message: `¿Estás seguro de que quieres eliminar a "${member.name}"? Esta acción no se puede deshacer.`,
+              confirmText: 'Eliminar',
+              onConfirm: () => handleDeleteTeamMember(member.id)
+            }})}
           />
         );
       default:

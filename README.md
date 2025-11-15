@@ -32,17 +32,20 @@ Una aplicación web completa y robusta diseñada para centralizar y optimizar el
 
 ### 2. Módulo de Clientes
 
--   **Gestión de Clientes**:
-    -   Sección dedicada para añadir y listar todos los clientes de la empresa.
+-   **Gestión CRUD Completa**:
+    -   Sección dedicada para **crear, listar, editar y eliminar** clientes.
     -   Formulario para registrar nombre de la empresa, contacto, email y teléfono.
+    -   **Protección de Datos**: No se puede eliminar un cliente si está asociado a alguna propuesta.
 -   **Vista de 360 Grados**:
     -   Al seleccionar un cliente, se accede a una vista de detalle que muestra su información de contacto y una lista completa de todas las propuestas asociadas a él.
 
 ### 3. Módulo de Equipo
 
--   **Gestión Centralizada**: Una sección dedicada para añadir y listar a todos los miembros del equipo.
--   **Información Detallada**: Define el nombre, rol, alias (opcional) y correo electrónico de cada persona.
--   **Importación Masiva**: Carga rápidamente a todo tu equipo desde un archivo CSV, ahorrando tiempo en la configuración inicial. El formato esperado es `name,role,alias,email` (sin cabecera).
+-   **Gestión CRUD Completa**:
+    -   Sección dedicada para **crear, listar, editar y eliminar** miembros del equipo.
+    -   **Información Detallada**: Define el nombre, rol, alias (opcional) y correo electrónico.
+    -   **Importación Masiva**: Carga rápidamente a todo tu equipo desde un archivo CSV. El formato esperado es `name,role,alias,email` (sin cabecera).
+    -   **Protección de Datos**: No se puede eliminar un miembro del equipo si está asignado como líder o participante en alguna propuesta.
 
 ### 4. Colaboración y Seguimiento
 

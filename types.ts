@@ -77,6 +77,6 @@ export type Notification = {
 };
 
 export type ModalState = {
-  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | 'createTeamMember' | null;
+  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | 'createTeamMember' | 'editClient' | 'editTeamMember' | null;
   data?: any;
 };
