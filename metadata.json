@@ -1,0 +1,5 @@
+{
+  "name": "Gestor de Propuestas con Versionamiento",
+  "description": "Una aplicación web para gestionar propuestas y sus documentos asociados. Permite crear propuestas, cargar documentos y mantener un historial de versiones detallado para cada cambio realizado, asegurando un seguimiento completo del ciclo de vida de la propuesta.",
+  "requestFramePermissions": []
+}
