@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Proposal, Client, TeamMember, ProposalStatus, Document } from '../types';
-import { ArrowLeftIcon, ClockIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, PencilIcon } from './Icon';
+import { ArrowLeftIcon, ClockIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, PencilIcon, FireIcon } from './Icon';
 import ProposalDetailTabs from './ProposalDetailTabs';
 
 interface ProposalDetailProps {
@@ -13,7 +13,7 @@ interface ProposalDetailProps {
   onViewHistory: (document: Document) => void;
   onUpdateStatus: (proposalId: string, status: ProposalStatus) => void;
   onUpdateProposalLeader: (proposalId: string, leaderId: string) => void;
-  onUpdateProposalDetails: (proposalId: string, details: { title: string; description: string; deadline: Date }) => void;
+  onUpdateProposalDetails: (proposalId: string, details: { title: string; description: string; deadline: Date; alertDate?: Date }) => void;
   onAssignMember: (proposalId: string, memberId: string, hours: number) => void;
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
@@ -34,17 +34,22 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(proposal.title);
   const [editedDescription, setEditedDescription] = useState(proposal.description);
-  const [editedDeadline, setEditedDeadline] = useState(proposal.deadline.toISOString().split('T')[0]);
+  const [editedDeadline, setEditedDeadline] = useState(new Date(proposal.deadline).toISOString().split('T')[0]);
+  const [editedAlertDate, setEditedAlertDate] = useState(proposal.alertDate ? new Date(proposal.alertDate).toISOString().split('T')[0] : '');
+  const [editError, setEditError] = useState('');
 
   const isArchived = proposal.status === 'Archivado';
+  const canEdit = !isArchived && proposal.status !== 'Enviado';
   const client = clients.find(c => c.id === proposal.clientId);
   const leader = proposal.leaderId ? teamMembers.find(tm => tm.id === proposal.leaderId) : null;
   
   const handleEdit = () => {
     setIsEditing(true);
+    setEditError('');
     setEditedTitle(proposal.title);
     setEditedDescription(proposal.description);
-    setEditedDeadline(proposal.deadline.toISOString().split('T')[0]);
+    setEditedDeadline(new Date(proposal.deadline).toISOString().split('T')[0]);
+    setEditedAlertDate(proposal.alertDate ? new Date(proposal.alertDate).toISOString().split('T')[0] : '');
   };
 
   const handleCancel = () => {
@@ -52,14 +57,28 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
   };
 
   const handleSave = () => {
-    const [year, month, day] = editedDeadline.split('-').map(Number);
-    // Note: JS month is 0-indexed, so month - 1
-    const deadlineDate = new Date(Date.UTC(year, month - 1, day));
+    setEditError('');
+    const deadlineDate = new Date(editedDeadline);
+    const alertDateObj = editedAlertDate ? new Date(editedAlertDate) : undefined;
+
+    deadlineDate.setMinutes(deadlineDate.getMinutes() + deadlineDate.getTimezoneOffset());
+    if (alertDateObj) {
+      alertDateObj.setMinutes(alertDateObj.getMinutes() + alertDateObj.getTimezoneOffset());
+    }
+
+    if (alertDateObj && alertDateObj >= deadlineDate) {
+      setEditError('La fecha de alerta debe ser anterior a la fecha límite.');
+      return;
+    }
+
+    const deadlineUtc = new Date(Date.UTC(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate()));
+    const alertDateUtc = alertDateObj ? new Date(Date.UTC(alertDateObj.getFullYear(), alertDateObj.getMonth(), alertDateObj.getDate())) : undefined;
     
     onUpdateProposalDetails(proposal.id, {
       title: editedTitle,
       description: editedDescription,
-      deadline: deadlineDate,
+      deadline: deadlineUtc,
+      alertDate: alertDateUtc,
     });
     setIsEditing(false);
   };
@@ -103,6 +122,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
               )}
             </div>
             <div className="mt-4 md:mt-0 md:ml-6 flex-shrink-0 w-full md:w-64">
+              {editError && <p className="text-red-500 text-sm mb-2 text-center md:text-right">{editError}</p>}
               <div className="mb-4">
                 {isEditing ? (
                   <div className="flex space-x-3">
@@ -110,7 +130,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                     <button onClick={handleCancel} className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
                   </div>
                 ) : (
-                  !isArchived && proposal.status === 'Borrador' && (
+                  canEdit && (
                     <button onClick={handleEdit} className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                       <PencilIcon className="w-5 h-5 mr-2 -ml-1" />
                       Editar Propuesta
@@ -175,7 +195,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                   )}
               </div>
               <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 space-y-1 text-right">
-                <p>Creado: {proposal.createdAt.toLocaleDateString('es-ES')}</p>
+                <p>Creado: {new Date(proposal.createdAt).toLocaleDateString('es-ES')}</p>
                 <div className="flex items-center justify-end">
                   <ClockIcon className="w-4 h-4 mr-1.5" />
                   <span>Fecha límite:</span>
@@ -187,7 +207,21 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                       className="font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 ml-1 text-sm"
                     />
                   ) : (
-                    <span className="font-semibold dark:text-gray-300 ml-1">{proposal.deadline.toLocaleDateString('es-ES')}</span>
+                    <span className="font-semibold dark:text-gray-300 ml-1">{new Date(proposal.deadline).toLocaleDateString('es-ES')}</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-end">
+                  <FireIcon className="w-4 h-4 mr-1.5" />
+                  <span>Fecha de alerta:</span>
+                   {isEditing ? (
+                    <input
+                      type="date"
+                      value={editedAlertDate}
+                      onChange={(e) => setEditedAlertDate(e.target.value)}
+                      className="font-semibold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 ml-1 text-sm"
+                    />
+                  ) : (
+                    <span className="font-semibold dark:text-gray-300 ml-1">{proposal.alertDate ? new Date(proposal.alertDate).toLocaleDateString('es-ES') : 'No definida'}</span>
                   )}
                 </div>
               </div>

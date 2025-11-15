@@ -22,11 +22,10 @@ const statusClasses: Record<ProposalStatus, string> = {
 
 const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: TeamMember; onSelect: () => void }> = ({ proposal, client, leader, onSelect }) => {
   const now = new Date();
-  const deadline = proposal.deadline;
-  // Ensure deadline is a valid date before comparison
-  const deadlineTime = deadline instanceof Date ? deadline.getTime() : new Date(deadline).getTime();
-  const daysRemaining = Math.ceil((deadlineTime - now.getTime()) / (1000 * 60 * 60 * 24));
-  const isUrgent = daysRemaining >= 0 && daysRemaining <= 7 && proposal.status !== 'Aceptado' && proposal.status !== 'Archivado';
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  const alertDate = proposal.alertDate ? new Date(proposal.alertDate) : null;
+  const isUrgent = alertDate && today >= alertDate && proposal.status !== 'Aceptado' && proposal.status !== 'Archivado';
   
   const cardClasses = `bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border ${
     isUrgent ? 'border-amber-500 dark:border-amber-400' : 'border-gray-200 dark:border-gray-700'
@@ -44,11 +43,11 @@ const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: Tea
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{client?.companyName || 'Cliente no encontrado'}</p>
         <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <div className="space-y-1">
-              <p>Creado: {proposal.createdAt.toLocaleDateString('es-ES')}</p>
+              <p>Creado: {new Date(proposal.createdAt).toLocaleDateString('es-ES')}</p>
               <p className={`flex items-center ${isUrgent ? 'text-amber-600 dark:text-amber-500' : ''}`}>
                   {isUrgent && <FireIcon className="w-4 h-4 mr-1.5" />}
                   <ClockIcon className={`w-4 h-4 mr-1.5 ${isUrgent ? 'text-amber-500' : 'text-gray-400 dark:text-gray-500'}`} />
-                  Límite: <span className={`font-semibold ml-1 ${isUrgent ? '' : 'dark:text-gray-300'}`}>{proposal.deadline.toLocaleDateString('es-ES')}</span>
+                  Límite: <span className={`font-semibold ml-1 ${isUrgent ? '' : 'dark:text-gray-300'}`}>{new Date(proposal.deadline).toLocaleDateString('es-ES')}</span>
               </p>
               {leader && (
                 <p className="flex items-center" title={`Líder: ${leader.name}`}>

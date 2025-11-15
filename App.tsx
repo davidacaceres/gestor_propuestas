@@ -29,7 +29,8 @@ const initialProposals: Proposal[] = [
     clientId: 'client-1',
     leaderId: 'team-3',
     description: 'Propuesta completa para el rediseño del sitio web corporativo de Innovatech Solutions, incluyendo UX/UI y desarrollo frontend.',
-    deadline: new Date(new Date().setDate(new Date().getDate() + 5)), // Due in 5 days
+    deadline: new Date(new Date().setDate(new Date().getDate() + 5)),
+    alertDate: new Date(new Date().setDate(new Date().getDate() + 2)),
     status: 'Enviado',
     createdAt: new Date(2023, 10, 15),
     documents: [
@@ -70,6 +71,7 @@ const initialProposals: Proposal[] = [
     leaderId: 'team-4',
     description: 'Estrategia y ejecución de campaña de marketing digital para el primer trimestre de 2024.',
     deadline: new Date(2023, 11, 20),
+    alertDate: new Date(2023, 11, 15),
     status: 'Aceptado',
     createdAt: new Date(2023, 11, 5),
     documents: [],
@@ -88,6 +90,7 @@ const initialProposals: Proposal[] = [
     leaderId: 'team-3',
     description: 'Desarrollo de una aplicación móvil nativa para iOS y Android para Stellar Goods.',
     deadline: new Date(new Date().setDate(new Date().getDate() + 15)),
+    alertDate: new Date(new Date().setDate(new Date().getDate() + 10)),
     status: 'Borrador',
     createdAt: new Date(),
     documents: [
@@ -134,34 +137,35 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const now = new Date();
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(now.getDate() + 7);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const upcomingProposals = proposals.filter(p =>
-      p.status !== 'Archivado' &&
-      p.deadline > now &&
-      p.deadline <= sevenDaysFromNow
-    );
+    const proposalsNeedingAlert = proposals.filter(p => {
+        if (!p.alertDate || p.status === 'Archivado' || p.status === 'Aceptado') {
+            return false;
+        }
+        const alertDate = new Date(p.alertDate);
+        const alertDay = new Date(alertDate.getFullYear(), alertDate.getMonth(), alertDate.getDate());
+        return today >= alertDay;
+    });
 
-    upcomingProposals.forEach(p => {
+    proposalsNeedingAlert.forEach(p => {
       const notificationExists = notifications.some(
-        n => n.proposalId === p.id && n.message.includes('vence')
+        n => n.proposalId === p.id && n.message.includes('alerta')
       );
-
       if (!notificationExists) {
-        const daysRemaining = Math.ceil((p.deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        addNotification(`La propuesta "${p.title}" vence en ${daysRemaining} día(s).`, p.id);
+        addNotification(`La fecha de alerta para "${p.title}" ha llegado.`, p.id);
       }
     });
   }, [proposals, notifications, addNotification]);
 
-  const handleCreateProposal = (title: string, clientId: string, description: string, deadline: Date) => {
+  const handleCreateProposal = (title: string, clientId: string, description: string, deadline: Date, alertDate?: Date) => {
     const newProposal: Proposal = {
       id: `prop-${Date.now()}`,
       title,
       clientId,
       description,
       deadline,
+      alertDate,
       status: 'Borrador',
       createdAt: new Date(),
       documents: [],
@@ -459,15 +463,31 @@ const App: React.FC = () => {
 
   const handleUpdateProposalDetails = (
     proposalId: string,
-    details: { title: string; description: string; deadline: Date }
+    details: { title: string; description: string; deadline: Date; alertDate?: Date }
   ) => {
     setProposals(prevProposals => {
+      const originalProposal = prevProposals.find(p => p.id === proposalId);
+      if (!originalProposal) return prevProposals;
+
+      const changes: string[] = [];
+      if (originalProposal.title !== details.title) changes.push('título');
+      if (originalProposal.description !== details.description) changes.push('descripción');
+      if (new Date(originalProposal.deadline).getTime() !== new Date(details.deadline).getTime()) changes.push('fecha límite');
+      
+      const oldAlertDate = originalProposal.alertDate ? new Date(originalProposal.alertDate).getTime() : undefined;
+      const newAlertDate = details.alertDate ? new Date(details.alertDate).getTime() : undefined;
+      if (oldAlertDate !== newAlertDate) changes.push('fecha de alerta');
+      
+      const description = changes.length > 0
+        ? `Se actualizó: ${changes.join(', ')}.`
+        : 'Se guardaron los detalles de la propuesta sin cambios.';
+
       const updatedProposals = prevProposals.map(p => {
         if (p.id === proposalId) {
           const newEntry: ProposalHistoryEntry = {
             id: `hist-${Date.now()}`,
             type: 'general',
-            description: 'Se actualizaron los detalles de la propuesta (título, descripción o fecha límite).',
+            description,
             timestamp: new Date(),
           };
           return { 
@@ -475,6 +495,7 @@ const App: React.FC = () => {
             title: details.title,
             description: details.description,
             deadline: details.deadline,
+            alertDate: details.alertDate,
             history: [newEntry, ...(p.history || [])] 
           };
         }
@@ -701,7 +722,7 @@ const App: React.FC = () => {
 
 interface CreateProposalFormProps {
   clients: Client[];
-  onSubmit: (title: string, clientId: string, description: string, deadline: Date) => void;
+  onSubmit: (title: string, clientId: string, description: string, deadline: Date, alertDate?: Date) => void;
   onCancel: () => void;
 }
 
@@ -710,19 +731,38 @@ const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ clients, onSubm
   const [clientId, setClientId] = useState('');
   const [description, setDescription] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [alertDate, setAlertDate] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+
     if (title.trim() && clientId && description.trim() && deadline) {
-      const [year, month, day] = deadline.split('-').map(Number);
-      const deadlineDate = new Date(year, month - 1, day);
-      onSubmit(title, clientId, description, deadlineDate);
+      const deadlineDate = new Date(deadline);
+      const alertDateObj = alertDate ? new Date(alertDate) : undefined;
+
+      deadlineDate.setMinutes(deadlineDate.getMinutes() + deadlineDate.getTimezoneOffset());
+      if (alertDateObj) {
+        alertDateObj.setMinutes(alertDateObj.getMinutes() + alertDateObj.getTimezoneOffset());
+      }
+      
+      if (alertDateObj && alertDateObj >= deadlineDate) {
+        setError('La fecha de alerta debe ser anterior a la fecha límite.');
+        return;
+      }
+
+      const deadlineUtc = new Date(Date.UTC(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate()));
+      const alertDateUtc = alertDateObj ? new Date(Date.UTC(alertDateObj.getFullYear(), alertDateObj.getMonth(), alertDateObj.getDate())) : undefined;
+      
+      onSubmit(title, clientId, description, deadlineUtc, alertDateUtc);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Nueva Propuesta</h2>
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
       <div className="space-y-4">
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título de la Propuesta</label>
@@ -741,9 +781,15 @@ const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ clients, onSubm
           <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
           <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required></textarea>
         </div>
-        <div>
-          <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Límite de Entrega</label>
-          <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+        <div className="grid grid-cols-2 gap-4">
+            <div>
+                <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Límite</label>
+                <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
+            </div>
+            <div>
+                <label htmlFor="alertDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha de Alerta (Opcional)</label>
+                <input type="date" id="alertDate" value={alertDate} onChange={e => setAlertDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+            </div>
         </div>
       </div>
       <div className="mt-8 flex justify-end space-x-3">
@@ -933,7 +979,7 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document: doc, onCanc
                                     <div className="flex-1 min-w-0 pt-1.5">
                                         <div className="flex justify-between items-center text-sm">
                                             <p className="text-gray-500 dark:text-gray-400">
-                                                {version.createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                {new Date(version.createdAt).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
                                             </p>
                                             <div className="flex items-center gap-x-3">
                                                 <p className="font-medium text-gray-700 dark:text-gray-300 truncate" title={version.fileName}>{version.fileName}</p>

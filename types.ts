@@ -56,6 +56,7 @@ export type Proposal = {
   clientId: string;
   description: string;
   deadline: Date;
+  alertDate?: Date;
   status: ProposalStatus;
   createdAt: Date;
   documents: Document[];
