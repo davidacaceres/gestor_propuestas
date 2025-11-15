@@ -1,11 +1,11 @@
-
 import React from 'react';
-import { Proposal, ProposalStatus, Client } from '../types';
-import { PlusIcon, FileTextIcon, ArchiveBoxIcon, ClockIcon } from './Icon';
+import { Proposal, ProposalStatus, Client, TeamMember } from '../types';
+import { PlusIcon, FileTextIcon, ArchiveBoxIcon, ClockIcon, UserIcon } from './Icon';
 
 interface ProposalListProps {
   proposals: Proposal[];
   clients: Client[];
+  teamMembers: TeamMember[];
   onSelectProposal: (proposal: Proposal) => void;
   onCreateProposal: () => void;
   showArchived: boolean;
@@ -20,7 +20,7 @@ const statusClasses: Record<ProposalStatus, string> = {
   'Archivado': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 };
 
-const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; onSelect: () => void }> = ({ proposal, client, onSelect }) => (
+const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: TeamMember; onSelect: () => void }> = ({ proposal, client, leader, onSelect }) => (
   <div onClick={onSelect} className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div className="p-5">
       <div className="flex justify-between items-start">
@@ -37,6 +37,12 @@ const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; onSelect: ()
                 <ClockIcon className="w-4 h-4 mr-1.5 text-gray-400 dark:text-gray-500" />
                 Límite: <span className="font-semibold ml-1 dark:text-gray-300">{proposal.deadline.toLocaleDateString('es-ES')}</span>
             </p>
+            {leader && (
+              <p className="flex items-center" title={`Líder: ${leader.name}`}>
+                  <UserIcon className="w-4 h-4 mr-1.5 text-gray-400 dark:text-gray-500" />
+                  Líder: <span className="font-semibold ml-1 dark:text-gray-300 truncate">{leader.name}</span>
+              </p>
+            )}
         </div>
         <div className="flex items-center">
             <FileTextIcon className="w-4 h-4 mr-1.5"/>
@@ -47,8 +53,9 @@ const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; onSelect: ()
   </div>
 );
 
-const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
+const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMembers, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
   const clientsMap = new Map(clients.map(c => [c.id, c]));
+  const teamMembersMap = new Map(teamMembers.map(tm => [tm.id, tm]));
   
   return (
     <div>
@@ -83,6 +90,7 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, onSelec
                 key={proposal.id} 
                 proposal={proposal} 
                 client={clientsMap.get(proposal.clientId)}
+                leader={proposal.leaderId ? teamMembersMap.get(proposal.leaderId) : undefined}
                 onSelect={() => onSelectProposal(proposal)} 
             />
           ))}

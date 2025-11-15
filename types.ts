@@ -62,6 +62,7 @@ export type Proposal = {
   assignedTeam: AssignedMember[];
   history: ProposalHistoryEntry[];
   comments: Comment[];
+  leaderId?: string;
 };
 
 export type Notification = {

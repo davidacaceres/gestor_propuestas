@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry, Comment } from './types';
 import Header from './components/Header';
@@ -28,6 +27,7 @@ const initialProposals: Proposal[] = [
     id: 'prop-1',
     title: 'Rediseño del Sitio Web Corporativo',
     clientId: 'client-1',
+    leaderId: 'team-3',
     description: 'Propuesta completa para el rediseño del sitio web corporativo de Innovatech Solutions, incluyendo UX/UI y desarrollo frontend.',
     deadline: new Date(new Date().setDate(new Date().getDate() + 5)), // Due in 5 days
     status: 'Enviado',
@@ -67,6 +67,7 @@ const initialProposals: Proposal[] = [
     id: 'prop-2',
     title: 'Campaña de Marketing Digital Q1 2024',
     clientId: 'client-2',
+    leaderId: 'team-4',
     description: 'Estrategia y ejecución de campaña de marketing digital para el primer trimestre de 2024.',
     deadline: new Date(2023, 11, 20),
     status: 'Aceptado',
@@ -84,6 +85,7 @@ const initialProposals: Proposal[] = [
     id: 'prop-3',
     title: 'Desarrollo de App Móvil',
     clientId: 'client-3',
+    leaderId: 'team-3',
     description: 'Desarrollo de una aplicación móvil nativa para iOS y Android para Stellar Goods.',
     deadline: new Date(new Date().setDate(new Date().getDate() + 15)),
     status: 'Borrador',
@@ -331,6 +333,39 @@ const App: React.FC = () => {
     }
   };
 
+  const handleUpdateProposalLeader = (proposalId: string, leaderId: string) => {
+    const leader = teamMembers.find(tm => tm.id === leaderId);
+    if (!leader) return;
+
+    setProposals(prevProposals => {
+        const updatedProposals = prevProposals.map(p => {
+            if (p.id === proposalId) {
+                const oldLeaderId = p.leaderId;
+                const oldLeader = oldLeaderId ? teamMembers.find(tm => tm.id === oldLeaderId) : null;
+                
+                const description = oldLeader
+                    ? `Líder cambiado de "${oldLeader.name}" a "${leader.name}".`
+                    : `"${leader.name}" fue asignado como líder.`;
+
+                const newEntry: ProposalHistoryEntry = {
+                    id: `hist-${Date.now()}`,
+                    type: 'team',
+                    description,
+                    timestamp: new Date(),
+                };
+                return { ...p, leaderId, history: [newEntry, ...(p.history || [])] };
+            }
+            return p;
+        });
+
+        if (selectedProposal && selectedProposal.id === proposalId) {
+            setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+        }
+        
+        return updatedProposals;
+    });
+  };
+
   const handleAssignMember = (proposalId: string, memberId: string, hours: number) => {
     const member = teamMembers.find(tm => tm.id === memberId);
     if (!member) return;
@@ -562,6 +597,7 @@ const App: React.FC = () => {
             onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })}
             onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })}
             onUpdateStatus={handleStatusChangeRequest}
+            onUpdateProposalLeader={handleUpdateProposalLeader}
             onAssignMember={handleAssignMember}
             onUnassignMember={handleUnassignMember}
             onUpdateAssignedHours={handleUpdateAssignedHours}
@@ -576,6 +612,7 @@ const App: React.FC = () => {
           <ProposalList
             proposals={visibleProposals}
             clients={clients}
+            teamMembers={teamMembers}
             onSelectProposal={handleSelectProposal}
             onCreateProposal={() => setModalState({ type: 'createProposal' })}
             showArchived={showArchived}
