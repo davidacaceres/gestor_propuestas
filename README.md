@@ -1,20 +1,73 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Gestor de Propuestas
 
-# Run and deploy your AI Studio app
+Una aplicación web completa y robusta diseñada para centralizar y optimizar el ciclo de vida completo de la gestión de propuestas comerciales. Desde la creación inicial hasta el archivo final, esta herramienta proporciona un entorno colaborativo e intuitivo para equipos de cualquier tamaño.
 
-This contains everything you need to run your app locally.
+## Características Principales
 
-View your app in AI Studio: https://ai.studio/apps/drive/1ziyD34X7_6mOv_3Vf406HKP84ouEDLA_
+-   **Gestión Integral de Propuestas**: Crea, edita, y gestiona el estado de tus propuestas.
+-   **Cartera de Clientes Centralizada**: Administra la información de tus clientes y visualiza su historial de propuestas.
+-   **Versionamiento de Documentos**: Sube documentos y mantén un historial completo de cada versión.
+-   **Colaboración en Equipo**: Asigna líderes, miembros de equipo, y deja comentarios.
+-   **Seguimiento y Notificaciones**: Mantente al día con un centro de notificaciones y un historial de actividad detallado.
+-   **Interfaz Moderna y Adaptable**: Diseño limpio, responsivo y con soporte para modo oscuro.
 
-## Run Locally
+---
 
-**Prerequisites:**  Node.js
+## Detalle de Funcionalidades
 
+### 1. Módulo de Propuestas
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+-   **Creación y Edición**:
+    -   Formulario completo para crear propuestas con título, descripción, cliente asociado, fecha límite y una **fecha de alerta personalizable**.
+    -   Edición en línea de los detalles de la propuesta (título, descripción, fechas) en estados permitidos.
+-   **Gestión de Estado**:
+    -   Ciclo de vida completo con estados: `Borrador`, `Enviado`, `Aceptado`, `Rechazado`.
+    -   Función de **Archivado** para mantener limpia la lista de propuestas activas.
+    -   Confirmaciones para acciones críticas como archivar o desarchivar.
+-   **Alertas Visuales**:
+    -   Las propuestas cuya fecha actual supera la **fecha de alerta** se resaltan visualmente en la lista para indicar urgencia.
+-   **Búsqueda en Archivo**:
+    -   Potente barra de búsqueda para encontrar propuestas archivadas por título o cliente, optimizada para un alto rendimiento a largo plazo.
+
+### 2. Módulo de Clientes
+
+-   **Gestión de Clientes**:
+    -   Sección dedicada para añadir y listar todos los clientes de la empresa.
+    -   Formulario para registrar nombre de la empresa, contacto, email y teléfono.
+-   **Vista de 360 Grados**:
+    -   Al seleccionar un cliente, se accede a una vista de detalle que muestra su información de contacto y una lista completa de todas las propuestas asociadas a él.
+
+### 3. Colaboración y Seguimiento
+
+-   **Asignación de Roles**:
+    -   Asigna un **Líder de Propuesta** como responsable principal. El cambio de líder requiere confirmación.
+    -   Añade **miembros del equipo** a cada propuesta y asigna un número de horas de trabajo.
+    -   Edita las horas asignadas de forma individual.
+-   **Versionamiento de Documentos**:
+    -   Sube múltiples documentos a cada propuesta.
+    -   Carga nuevas versiones de un documento existente, manteniendo un historial detallado con notas y fecha.
+    -   Descarga cualquier versión de un documento desde su historial.
+-   **Sección de Comentarios**:
+    -   Un espacio de discusión tipo chat dentro de cada propuesta para que el equipo colabore y centralice la comunicación.
+-   **Historial de Actividad**:
+    -   Una línea de tiempo detallada que registra automáticamente cada cambio importante: creación, cambios de estado, subida de documentos, asignación de equipo y modificaciones de detalles.
+
+### 4. Notificaciones y Experiencia de Usuario
+
+-   **Centro de Notificaciones**:
+    -   Un icono de campana en la cabecera alerta sobre nuevos eventos.
+    -   Notificaciones automáticas para:
+        -   Propuestas que alcanzan su fecha de alerta.
+        -   Cambios de estado.
+        -   Nuevos documentos o versiones.
+    -   Navegación directa desde una notificación a la propuesta correspondiente.
+-   **Interfaz Intuitiva**:
+    -   Diseño organizado con pestañas en la vista de detalle para no sobrecargar de información (`Documentos`, `Equipo`, `Comentarios`, `Historial`).
+    -   **Modo Oscuro** automático que se adapta a las preferencias del sistema operativo.
+    -   Componentes reutilizables y una base de código modular para fácil mantenimiento.
+
+## Stack Tecnológico
+
+-   **Frontend**: React.js
+-   **Lenguaje**: TypeScript
+-   **Estilos**: Tailwind CSS
