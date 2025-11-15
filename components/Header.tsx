@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { FileTextIcon, UserGroupIcon } from './Icon';
 
@@ -10,16 +11,16 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
   const navItemClasses = "inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium";
-  const activeClasses = "border-primary-500 text-gray-900";
-  const inactiveClasses = "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700";
+  const activeClasses = "border-primary-500 text-gray-900 dark:text-white";
+  const inactiveClasses = "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-300";
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white dark:bg-gray-800 shadow-sm dark:border-b dark:border-gray-700">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <FileTextIcon className="h-8 w-8 text-primary-600" />
-            <h1 className="ml-3 text-2xl font-bold text-gray-800 tracking-tight">
+            <h1 className="ml-3 text-2xl font-bold text-gray-800 dark:text-gray-100 tracking-tight">
               Gestor de Propuestas
             </h1>
           </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember } from './types';
 import Header from './components/Header';
@@ -378,7 +379,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-800">
+    <div className="min-h-screen text-gray-800 dark:text-gray-200">
       <Header currentView={currentView} onNavigate={handleNavigate} />
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
         {renderCurrentView()}
@@ -415,15 +416,15 @@ const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ clients, onSubm
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Nueva Propuesta</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Nueva Propuesta</h2>
       <div className="space-y-4">
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">Título de la Propuesta</label>
-          <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Título de la Propuesta</label>
+          <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
         </div>
         <div>
-          <label htmlFor="client" className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-          <select id="client" value={clientId} onChange={e => setClientId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white" required>
+          <label htmlFor="client" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cliente</label>
+          <select id="client" value={clientId} onChange={e => setClientId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
             <option value="" disabled>Selecciona un cliente</option>
             {clients.map(client => (
               <option key={client.id} value={client.id}>{client.companyName}</option>
@@ -431,16 +432,16 @@ const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ clients, onSubm
           </select>
         </div>
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-          <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required></textarea>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Descripción</label>
+          <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required></textarea>
         </div>
         <div>
-          <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">Fecha Límite de Entrega</label>
-          <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+          <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Límite de Entrega</label>
+          <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
         </div>
       </div>
       <div className="mt-8 flex justify-end space-x-3">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Cancelar</button>
+        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
         <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center">
           <PlusIcon className="w-5 h-5 mr-2" />
           Crear Propuesta
@@ -471,27 +472,27 @@ const CreateClientForm: React.FC<CreateClientFormProps> = ({ onSubmit, onCancel 
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Nuevo Cliente</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Nuevo Cliente</h2>
       <div className="space-y-4">
         <div>
-          <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
-          <input type="text" id="companyName" value={companyName} onChange={e => setCompanyName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+          <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Empresa</label>
+          <input type="text" id="companyName" value={companyName} onChange={e => setCompanyName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
         </div>
         <div>
-          <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-1">Nombre de Contacto</label>
-          <input type="text" id="contactName" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+          <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre de Contacto</label>
+          <input type="text" id="contactName" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
         </div>
         <div>
-          <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-1">Email de Contacto</label>
-          <input type="email" id="contactEmail" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+          <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email de Contacto</label>
+          <input type="email" id="contactEmail" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
         </div>
         <div>
-          <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 mb-1">Teléfono de Contacto</label>
-          <input type="tel" id="contactPhone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+          <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Teléfono de Contacto</label>
+          <input type="tel" id="contactPhone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
         </div>
       </div>
       <div className="mt-8 flex justify-end space-x-3">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Cancelar</button>
+        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
         <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center">
           <PlusIcon className="w-5 h-5 mr-2" />
           Crear Cliente
@@ -537,37 +538,37 @@ const UploadDocumentForm: React.FC<UploadDocumentFormProps> = ({ proposalId, doc
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">{isNewVersion ? `Nueva Versión para "${documentName}"` : 'Añadir Nuevo Documento'}</h2>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">{isNewVersion ? `Nueva Versión para "${documentName}"` : 'Añadir Nuevo Documento'}</h2>
       <div className="space-y-4">
         {!isNewVersion && (
           <div>
-            <label htmlFor="docName" className="block text-sm font-medium text-gray-700 mb-1">Nombre del Documento</label>
-            <input type="text" id="docName" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+            <label htmlFor="docName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre del Documento</label>
+            <input type="text" id="docName" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required />
           </div>
         )}
         <div>
-           <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-1">Archivo</label>
-          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+           <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Archivo</label>
+          <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md dark:border-gray-600">
             <div className="space-y-1 text-center">
               <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              <div className="flex text-sm text-gray-600">
-                <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500">
+              <div className="flex text-sm text-gray-600 dark:text-gray-400">
+                <label htmlFor="file-upload" className="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
                   <span>Subir un archivo</span>
                   <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} required />
                 </label>
                 <p className="pl-1">o arrastrar y soltar</p>
               </div>
-              <p className="text-xs text-gray-500">{file ? file.name : 'PNG, JPG, PDF, etc.'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">{file ? file.name : 'PNG, JPG, PDF, etc.'}</p>
             </div>
           </div>
         </div>
         <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Notas de la Versión</label>
-          <textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" placeholder={isNewVersion ? 'Ej: Correcciones basadas en feedback.' : 'Ej: Versión inicial del documento.'} required></textarea>
+          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notas de la Versión</label>
+          <textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder={isNewVersion ? 'Ej: Correcciones basadas en feedback.' : 'Ej: Versión inicial del documento.'} required></textarea>
         </div>
       </div>
       <div className="mt-8 flex justify-end space-x-3">
-        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Cancelar</button>
+        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
         <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center">
           <UploadIcon className="w-5 h-5 mr-2" />
           {isNewVersion ? 'Subir Versión' : 'Añadir Documento'}
@@ -603,10 +604,10 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel })
         <div>
             <div className="flex justify-between items-start">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-800">Historial de Versiones</h2>
-                    <p className="text-gray-600 mt-1">"{document.name}"</p>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Historial de Versiones</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">"{document.name}"</p>
                 </div>
-                <button onClick={onCancel} className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <button onClick={onCancel} className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:hover:bg-gray-700 dark:hover:text-gray-300">
                     <XIcon className="w-6 h-6" />
                 </button>
             </div>
@@ -616,28 +617,28 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel })
                         <li key={version.versionNumber}>
                             <div className="relative pb-8">
                                 {versionIdx !== document.versions.length - 1 ? (
-                                    <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true" />
+                                    <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
                                 ) : null}
                                 <div className="relative flex space-x-3 items-start">
                                     <div>
-                                        <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${versionIdx === 0 ? 'bg-primary-500' : 'bg-gray-400'}`}>
+                                        <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white dark:ring-gray-800 ${versionIdx === 0 ? 'bg-primary-500' : 'bg-gray-400'}`}>
                                             <span className="text-white font-bold text-sm">V{version.versionNumber}</span>
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0 pt-1.5">
                                         <div className="flex justify-between items-center text-sm">
-                                            <p className="text-gray-500">
+                                            <p className="text-gray-500 dark:text-gray-400">
                                                 {version.createdAt.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
                                             </p>
                                             <div className="flex items-center gap-x-3">
-                                                <p className="font-medium text-gray-700 truncate" title={version.fileName}>{version.fileName}</p>
-                                                <button onClick={() => handleDownload(version)} className="text-primary-600 hover:text-primary-800 transition-colors" title={`Descargar ${version.fileName}`}>
+                                                <p className="font-medium text-gray-700 dark:text-gray-300 truncate" title={version.fileName}>{version.fileName}</p>
+                                                <button onClick={() => handleDownload(version)} className="text-primary-600 hover:text-primary-800 transition-colors dark:text-primary-400 dark:hover:text-primary-300" title={`Descargar ${version.fileName}`}>
                                                     <DownloadIcon className="w-5 h-5" />
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                                            <p className="text-sm text-gray-800">{version.notes}</p>
+                                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                                            <p className="text-sm text-gray-800 dark:text-gray-200">{version.notes}</p>
                                         </div>
                                     </div>
                                 </div>
