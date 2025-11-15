@@ -154,3 +154,15 @@ export const FireIcon: React.FC<IconProps> = ({ className }) => (
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.362-3.797A8.33 8.33 0 0112 2.25c.879 0 1.724.223 2.5.632l2.368-1.285A8.287 8.287 0 0012 2.25 8.287 8.287 0 006.038 7.048c-1.152 2.56-1.344 4.98-.644 6.662a8.261 8.261 0 0012.23-6.662c.414-1.25.1-2.943-.644-4.286a8.33 8.33 0 01-2.585-2.541z" />
     </svg>
 );
+
+export const UsersIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-2.253 9.5 9.5 0 00-11.233-12.783c-1.854.766-3.418 2.01-4.622 3.633a9.5 9.5 0 00-2.478 11.233 9.337 9.337 0 004.121 2.253 9.38 9.38 0 002.625-.372M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+export const ArrowDownTrayIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+    </svg>
+);

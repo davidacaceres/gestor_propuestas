@@ -27,6 +27,8 @@ export type TeamMember = {
   id: string;
   name: string;
   role: string;
+  alias?: string;
+  email?: string;
 };
 
 export type AssignedMember = {
@@ -75,6 +77,6 @@ export type Notification = {
 };
 
 export type ModalState = {
-  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | null;
+  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | 'createTeamMember' | null;
   data?: any;
 };

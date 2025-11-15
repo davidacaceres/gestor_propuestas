@@ -5,9 +5,11 @@ import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
 import ClientList from './components/ClientList';
 import ClientDetail from './components/ClientDetail';
+import TeamList from './components/TeamList';
 import Modal from './components/Modal';
 import CreateProposalForm from './components/CreateProposalForm';
 import CreateClientForm from './components/CreateClientForm';
+import CreateTeamMemberForm from './components/CreateTeamMemberForm';
 import UploadDocumentForm from './components/UploadDocumentForm';
 import DocumentHistory from './components/DocumentHistory';
 import ConfirmationDialog from './components/ConfirmationDialog';
@@ -19,10 +21,10 @@ const initialClients: Client[] = [
 ];
 
 const initialTeamMembers: TeamMember[] = [
-  { id: 'team-1', name: 'Juan Rodríguez', role: 'Diseñador UX/UI' },
-  { id: 'team-2', name: 'Sofía López', role: 'Desarrolladora Frontend' },
-  { id: 'team-3', name: 'Miguel Hernández', role: 'Jefe de Proyecto' },
-  { id: 'team-4', name: 'Valentina Gómez', role: 'Especialista en Marketing' },
+  { id: 'team-1', name: 'Juan Rodríguez', role: 'Diseñador UX/UI', alias: 'juanux', email: 'juan.r@example.com' },
+  { id: 'team-2', name: 'Sofía López', role: 'Desarrolladora Frontend', alias: 'sofi', email: 'sofia.l@example.com' },
+  { id: 'team-3', name: 'Miguel Hernández', role: 'Jefe de Proyecto', alias: 'mike', email: 'miguel.h@example.com' },
+  { id: 'team-4', name: 'Valentina Gómez', role: 'Especialista en Marketing', alias: 'vale', email: 'valentina.g@example.com' },
 ];
 
 const initialProposals: Proposal[] = [
@@ -114,7 +116,7 @@ const initialProposals: Proposal[] = [
   },
 ];
 
-type View = 'proposals' | 'clients';
+type View = 'proposals' | 'clients' | 'team';
 
 const App: React.FC = () => {
   const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
@@ -197,7 +199,50 @@ const App: React.FC = () => {
     };
     setClients(prev => [newClient, ...prev]);
     setModalState({ type: null });
-  }
+  };
+
+  const handleCreateTeamMember = (name: string, role: string, alias?: string, email?: string) => {
+    const newMember: TeamMember = {
+      id: `team-${Date.now()}`,
+      name,
+      role,
+      alias,
+      email,
+    };
+    setTeamMembers(prev => [newMember, ...prev]);
+    setModalState({ type: null });
+  };
+  
+  const handleImportTeamMembers = (fileContent: string) => {
+    try {
+        const lines = fileContent.trim().split('\n');
+        // Add explicit return type `TeamMember | null` to map function to fix type inference issue for the filter.
+        const newMembers: TeamMember[] = lines.map((line, index): TeamMember | null => {
+            const [name, role, alias, email] = line.split(',').map(field => field ? field.trim() : '');
+            if (!name || !role) {
+                console.warn(`Skipping invalid line in CSV: ${index + 1} - ${line}`);
+                return null;
+            }
+            return {
+                id: `team-import-${Date.now()}-${index}`,
+                name,
+                role,
+                alias: alias || undefined,
+                email: email || undefined,
+            };
+        }).filter((member): member is TeamMember => member !== null);
+
+        if (newMembers.length > 0) {
+            setTeamMembers(prev => [...prev, ...newMembers]);
+            alert(`${newMembers.length} miembro(s) importado(s) correctamente.`);
+        } else {
+            alert('No se encontraron miembros válidos para importar. Asegúrese de que el formato sea: nombre,rol,alias,email');
+        }
+    } catch (error) {
+        console.error("Error importing from CSV:", error);
+        alert('Ocurrió un error al importar el archivo CSV. Por favor, revisa el formato y el contenido.');
+    }
+  };
 
   const handleAddOrUpdateDocument = (proposalId: string, documentData: { name: string; file: { name: string; content: string }; notes: string }, documentId?: string) => {
     let proposalTitle = '';
@@ -627,6 +672,8 @@ const App: React.FC = () => {
         return <CreateProposalForm clients={clients} onSubmit={handleCreateProposal} onCancel={() => setModalState({ type: null })} />;
       case 'createClient':
         return <CreateClientForm onSubmit={handleCreateClient} onCancel={() => setModalState({ type: null })} />;
+      case 'createTeamMember':
+        return <CreateTeamMemberForm onSubmit={handleCreateTeamMember} onCancel={() => setModalState({ type: null })} />;
       case 'uploadDocument':
         return (
           <UploadDocumentForm
@@ -714,6 +761,14 @@ const App: React.FC = () => {
             clients={clients} 
             onSelectClient={handleSelectClient}
             onCreateClient={() => setModalState({ type: 'createClient' })} 
+          />
+        );
+      case 'team':
+        return (
+          <TeamList
+            teamMembers={teamMembers}
+            onCreateTeamMember={() => setModalState({ type: 'createTeamMember' })}
+            onImportTeamMembers={handleImportTeamMembers}
           />
         );
       default:

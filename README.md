@@ -6,6 +6,7 @@ Una aplicación web completa y robusta diseñada para centralizar y optimizar el
 
 -   **Gestión Integral de Propuestas**: Crea, edita, y gestiona el estado de tus propuestas.
 -   **Cartera de Clientes Centralizada**: Administra la información de tus clientes y visualiza su historial de propuestas.
+-   **Módulo de Equipo**: Gestiona de forma centralizada a los miembros de tu equipo y sus roles.
 -   **Versionamiento de Documentos**: Sube documentos y mantén un historial completo de cada versión.
 -   **Colaboración en Equipo**: Asigna líderes, miembros de equipo, y deja comentarios.
 -   **Seguimiento y Notificaciones**: Mantente al día con un centro de notificaciones y un historial de actividad detallado.
@@ -37,7 +38,13 @@ Una aplicación web completa y robusta diseñada para centralizar y optimizar el
 -   **Vista de 360 Grados**:
     -   Al seleccionar un cliente, se accede a una vista de detalle que muestra su información de contacto y una lista completa de todas las propuestas asociadas a él.
 
-### 3. Colaboración y Seguimiento
+### 3. Módulo de Equipo
+
+-   **Gestión Centralizada**: Una sección dedicada para añadir y listar a todos los miembros del equipo.
+-   **Información Detallada**: Define el nombre, rol, alias (opcional) y correo electrónico de cada persona.
+-   **Importación Masiva**: Carga rápidamente a todo tu equipo desde un archivo CSV, ahorrando tiempo en la configuración inicial. El formato esperado es `name,role,alias,email` (sin cabecera).
+
+### 4. Colaboración y Seguimiento
 
 -   **Asignación de Roles**:
     -   Asigna un **Líder de Propuesta** como responsable principal. El cambio de líder requiere confirmación.
@@ -52,7 +59,7 @@ Una aplicación web completa y robusta diseñada para centralizar y optimizar el
 -   **Historial de Actividad**:
     -   Una línea de tiempo detallada que registra automáticamente cada cambio importante: creación, cambios de estado, subida de documentos, asignación de equipo y modificaciones de detalles.
 
-### 4. Notificaciones y Experiencia de Usuario
+### 5. Notificaciones y Experiencia de Usuario
 
 -   **Centro de Notificaciones**:
     -   Un icono de campana en la cabecera alerta sobre nuevos eventos.

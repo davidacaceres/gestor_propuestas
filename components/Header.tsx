@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileTextIcon, UserGroupIcon, BellIcon } from './Icon';
+import { FileTextIcon, UserGroupIcon, BellIcon, UsersIcon } from './Icon';
 import { Notification } from '../types';
 import NotificationsPanel from './NotificationsPanel';
 
-type View = 'proposals' | 'clients';
+type View = 'proposals' | 'clients' | 'team';
 
 interface HeaderProps {
   currentView: View;
@@ -61,6 +61,13 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, notifications,
               >
                 <UserGroupIcon className="-ml-0.5 mr-2 h-5 w-5" />
                 Clientes
+              </button>
+              <button
+                onClick={() => onNavigate('team')}
+                className={`${navItemClasses} ${currentView === 'team' ? activeClasses : inactiveClasses}`}
+              >
+                <UsersIcon className="-ml-0.5 mr-2 h-5 w-5" />
+                Equipo
               </button>
             </div>
           </div>
