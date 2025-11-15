@@ -1,9 +1,10 @@
 import React from 'react';
-import { Proposal, ProposalStatus } from '../types';
-import { PlusIcon, FileTextIcon, ArchiveBoxIcon } from './Icon';
+import { Proposal, ProposalStatus, Client } from '../types';
+import { PlusIcon, FileTextIcon, ArchiveBoxIcon, ClockIcon } from './Icon';
 
 interface ProposalListProps {
   proposals: Proposal[];
+  clients: Client[];
   onSelectProposal: (proposal: Proposal) => void;
   onCreateProposal: () => void;
   showArchived: boolean;
@@ -18,7 +19,7 @@ const statusColors: Record<ProposalStatus, string> = {
   'Archivado': 'bg-purple-100 text-purple-800',
 };
 
-const ProposalCard: React.FC<{ proposal: Proposal; onSelect: () => void }> = ({ proposal, onSelect }) => (
+const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; onSelect: () => void }> = ({ proposal, client, onSelect }) => (
   <div onClick={onSelect} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border border-gray-200 overflow-hidden">
     <div className="p-5">
       <div className="flex justify-between items-start">
@@ -27,11 +28,15 @@ const ProposalCard: React.FC<{ proposal: Proposal; onSelect: () => void }> = ({ 
           {proposal.status}
         </span>
       </div>
-      <p className="mt-1 text-sm text-gray-600">{proposal.client}</p>
+      <p className="mt-1 text-sm text-gray-600">{client?.companyName || 'Cliente no encontrado'}</p>
       <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-        <p>
-          Creado: {proposal.createdAt.toLocaleDateString('es-ES')}
-        </p>
+        <div className="space-y-1">
+            <p>Creado: {proposal.createdAt.toLocaleDateString('es-ES')}</p>
+            <p className="flex items-center">
+                <ClockIcon className="w-4 h-4 mr-1.5 text-gray-400" />
+                Límite: <span className="font-semibold ml-1">{proposal.deadline.toLocaleDateString('es-ES')}</span>
+            </p>
+        </div>
         <div className="flex items-center">
             <FileTextIcon className="w-4 h-4 mr-1.5"/>
             <span>{proposal.documents.length} documento(s)</span>
@@ -41,7 +46,9 @@ const ProposalCard: React.FC<{ proposal: Proposal; onSelect: () => void }> = ({ 
   </div>
 );
 
-const ProposalList: React.FC<ProposalListProps> = ({ proposals, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
+const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
+  const clientsMap = new Map(clients.map(c => [c.id, c]));
+  
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -71,7 +78,12 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, onSelectProposal
       {proposals.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {proposals.map(proposal => (
-            <ProposalCard key={proposal.id} proposal={proposal} onSelect={() => onSelectProposal(proposal)} />
+            <ProposalCard 
+                key={proposal.id} 
+                proposal={proposal} 
+                client={clientsMap.get(proposal.clientId)}
+                onSelect={() => onSelectProposal(proposal)} 
+            />
           ))}
         </div>
       ) : (

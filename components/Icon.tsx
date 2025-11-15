@@ -69,3 +69,15 @@ export const ArrowUturnLeftIcon: React.FC<IconProps> = ({ className }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
   </svg>
 );
+
+export const UserGroupIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-7.5-2.962c.513-.96 1.487-1.591 2.571-1.591s2.058.63 2.571 1.591m-4.814.487a6.028 6.028 0 00-2.828 2.828.696.696 0 00-.049.207.696.696 0 00.207.665l.214.214a.696.696 0 00.665.207.696.696 0 00.207-.049 6.033 6.033 0 002.828-2.828m-3.15.532c.284.14.57.253.864.342m-1.391.246a.696.696 0 00.207.665l.214.214a.696.696 0 00.665.207.696.696 0 00.207-.049m1.391-0.246c.294-.089.58-.202.864-.342m-3.15.532a6.049 6.049 0 01-2.571 0m2.571 0a6.049 6.049 0 012.571 0m-2.571 0c-.294.089-.58.202-.864.342m3.15-.532c-.284-.14-.57-.253-.864-.342m0 0a.696.696 0 00-.207-.665L12 12.333a.696.696 0 00-.665-.207.696.696 0 00-.207.049m.922 0c-.294.089-.58.202-.864.342M3.75 12c0-4.86 3.89-8.813 8.75-8.813s8.75 3.953 8.75 8.813c0 1.508-.364 2.924-.994 4.195m-15.512 0c-.63.94-1.006 2.016-1.006 3.127 0 3.336 2.688 6.043 6 6.043s6-2.707 6-6.043c0-1.11-.376-2.186-1.006-3.126m12.553 0c.63.94 1.006 2.016 1.006 3.127 0 3.336-2.688 6.043-6 6.043s-6-2.707-6-6.043c0-1.11.376-2.186 1.006-3.126" />
+    </svg>
+);
+
+export const ChevronRightIcon: React.FC<IconProps> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);

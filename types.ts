@@ -15,16 +15,26 @@ export type Document = {
   createdAt: Date;
 };
 
+export type Client = {
+  id: string;
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+};
+
 export type Proposal = {
   id: string;
   title: string;
-  client: string;
+  clientId: string;
+  description: string;
+  deadline: Date;
   status: ProposalStatus;
   createdAt: Date;
   documents: Document[];
 };
 
 export type ModalState = {
-  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | null;
+  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | null;
   data?: any;
 };

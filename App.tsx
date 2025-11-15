@@ -1,16 +1,26 @@
 import React, { useState, useCallback } from 'react';
-import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState } from './types';
+import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client } from './types';
 import Header from './components/Header';
 import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
+import ClientList from './components/ClientList';
+import ClientDetail from './components/ClientDetail';
 import Modal from './components/Modal';
 import { PlusIcon, UploadIcon, XIcon, DownloadIcon } from './components/Icon';
+
+const initialClients: Client[] = [
+  { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
+  { id: 'client-2', companyName: 'Quantum Leap Inc.', contactName: 'Carlos García', contactEmail: 'c.garcia@quantumleap.io', contactPhone: '555-0102' },
+  { id: 'client-3', companyName: 'Stellar Goods', contactName: 'Laura Martínez', contactEmail: 'laura.m@stellargoods.co', contactPhone: '555-0103' },
+];
 
 const initialProposals: Proposal[] = [
   {
     id: 'prop-1',
     title: 'Rediseño del Sitio Web Corporativo',
-    client: 'Innovatech Solutions',
+    clientId: 'client-1',
+    description: 'Propuesta completa para el rediseño del sitio web corporativo de Innovatech Solutions, incluyendo UX/UI y desarrollo frontend.',
+    deadline: new Date(2023, 10, 30),
     status: 'Enviado',
     createdAt: new Date(2023, 10, 15),
     documents: [
@@ -36,7 +46,9 @@ const initialProposals: Proposal[] = [
   {
     id: 'prop-2',
     title: 'Campaña de Marketing Digital Q1 2024',
-    client: 'Quantum Leap Inc.',
+    clientId: 'client-2',
+    description: 'Estrategia y ejecución de campaña de marketing digital para el primer trimestre de 2024.',
+    deadline: new Date(2023, 11, 20),
     status: 'Aceptado',
     createdAt: new Date(2023, 11, 5),
     documents: [],
@@ -44,7 +56,9 @@ const initialProposals: Proposal[] = [
   {
     id: 'prop-3',
     title: 'Desarrollo de App Móvil',
-    client: 'Stellar Goods',
+    clientId: 'client-3',
+    description: 'Desarrollo de una aplicación móvil nativa para iOS y Android para Stellar Goods.',
+    deadline: new Date(2024, 0, 15),
     status: 'Borrador',
     createdAt: new Date(),
     documents: [
@@ -60,17 +74,24 @@ const initialProposals: Proposal[] = [
   },
 ];
 
+type View = 'proposals' | 'clients';
+
 const App: React.FC = () => {
   const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
+  const [clients, setClients] = useState<Client[]>(initialClients);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalState, setModalState] = useState<ModalState>({ type: null });
   const [showArchived, setShowArchived] = useState(false);
+  const [currentView, setCurrentView] = useState<View>('proposals');
 
-  const handleCreateProposal = (title: string, client: string) => {
+  const handleCreateProposal = (title: string, clientId: string, description: string, deadline: Date) => {
     const newProposal: Proposal = {
       id: `prop-${Date.now()}`,
       title,
-      client,
+      clientId,
+      description,
+      deadline,
       status: 'Borrador',
       createdAt: new Date(),
       documents: [],
@@ -79,6 +100,18 @@ const App: React.FC = () => {
     setModalState({ type: null });
   };
   
+  const handleCreateClient = (companyName: string, contactName: string, contactEmail: string, contactPhone: string) => {
+    const newClient: Client = {
+      id: `client-${Date.now()}`,
+      companyName,
+      contactName,
+      contactEmail,
+      contactPhone,
+    };
+    setClients(prev => [newClient, ...prev]);
+    setModalState({ type: null });
+  }
+
   const handleAddOrUpdateDocument = (proposalId: string, documentData: { name: string; file: { name: string; content: string }; notes: string }, documentId?: string) => {
     const updatedProposals = proposals.map(p => {
       if (p.id === proposalId) {
@@ -150,20 +183,55 @@ const App: React.FC = () => {
 
   const handleSelectProposal = (proposal: Proposal) => {
     setSelectedProposal(proposal);
+    setSelectedClient(null); // Clear client context to ensure back button goes to proposal list
+    setCurrentView('proposals');
+  };
+
+  const handleSelectProposalFromClient = (proposal: Proposal) => {
+    setSelectedProposal(proposal);
+    // Do not clear selectedClient, it's our navigation context
+    setCurrentView('proposals'); // Switch view to render ProposalDetail
   };
   
-  const handleBackToList = () => {
+  const handleSelectClient = (client: Client) => {
+    setSelectedClient(client);
+    setCurrentView('clients');
+  };
+
+  const handleBackFromProposalDetail = () => {
+    const proposalClientId = selectedProposal?.clientId;
     setSelectedProposal(null);
+
+    // If there's a client context and it matches the proposal's client, go back to that client's detail view
+    if (selectedClient && selectedClient.id === proposalClientId) {
+      setCurrentView('clients');
+    } else {
+      // Otherwise, default to the main proposal list
+      setSelectedClient(null);
+      setCurrentView('proposals');
+    }
+  };
+  
+  const handleBackToClientList = () => {
+    setSelectedClient(null);
   };
   
   const handleToggleShowArchived = () => {
     setShowArchived(prev => !prev);
   }
 
+  const handleNavigate = (view: View) => {
+    setCurrentView(view);
+    setSelectedProposal(null);
+    setSelectedClient(null);
+  };
+
   const renderModalContent = () => {
     switch (modalState.type) {
       case 'createProposal':
-        return <CreateProposalForm onSubmit={handleCreateProposal} onCancel={() => setModalState({ type: null })} />;
+        return <CreateProposalForm clients={clients} onSubmit={handleCreateProposal} onCancel={() => setModalState({ type: null })} />;
+      case 'createClient':
+        return <CreateClientForm onSubmit={handleCreateClient} onCancel={() => setModalState({ type: null })} />;
       case 'uploadDocument':
         return (
           <UploadDocumentForm
@@ -185,28 +253,63 @@ const App: React.FC = () => {
     showArchived ? p.status === 'Archivado' : p.status !== 'Archivado'
   );
 
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-800">
-      <Header />
-      <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-        {!selectedProposal ? (
-          <ProposalList
-            proposals={visibleProposals}
-            onSelectProposal={handleSelectProposal}
-            onCreateProposal={() => setModalState({ type: 'createProposal' })}
-            showArchived={showArchived}
-            onToggleShowArchived={handleToggleShowArchived}
-          />
-        ) : (
-          <ProposalDetail
+  const renderCurrentView = () => {
+    // A selected proposal always has rendering priority
+    if (selectedProposal) {
+      return (
+         <ProposalDetail
             proposal={selectedProposal}
-            onBack={handleBackToList}
+            clients={clients}
+            onBack={handleBackFromProposalDetail}
             onUploadNew={() => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id } })}
             onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })}
             onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })}
             onUpdateStatus={handleUpdateProposalStatus}
           />
-        )}
+      );
+    }
+
+    switch (currentView) {
+      case 'proposals':
+        return (
+          <ProposalList
+            proposals={visibleProposals}
+            clients={clients}
+            onSelectProposal={handleSelectProposal}
+            onCreateProposal={() => setModalState({ type: 'createProposal' })}
+            showArchived={showArchived}
+            onToggleShowArchived={handleToggleShowArchived}
+          />
+        );
+      case 'clients':
+        if (selectedClient) {
+          const clientProposals = proposals.filter(p => p.clientId === selectedClient.id);
+          return (
+            <ClientDetail 
+              client={selectedClient}
+              proposals={clientProposals}
+              onBack={handleBackToClientList}
+              onSelectProposal={handleSelectProposalFromClient}
+            />
+          );
+        }
+        return (
+          <ClientList 
+            clients={clients} 
+            onSelectClient={handleSelectClient}
+            onCreateClient={() => setModalState({ type: 'createClient' })} 
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+      <Header currentView={currentView} onNavigate={handleNavigate} />
+      <main className="container mx-auto p-4 sm:p-6 lg:p-8">
+        {renderCurrentView()}
       </main>
       <Modal isOpen={!!modalState.type} onClose={() => setModalState({ type: null })}>
         {renderModalContent()}
@@ -218,18 +321,23 @@ const App: React.FC = () => {
 // Modal Content Components
 
 interface CreateProposalFormProps {
-  onSubmit: (title: string, client: string) => void;
+  clients: Client[];
+  onSubmit: (title: string, clientId: string, description: string, deadline: Date) => void;
   onCancel: () => void;
 }
 
-const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSubmit, onCancel }) => {
+const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ clients, onSubmit, onCancel }) => {
   const [title, setTitle] = useState('');
-  const [client, setClient] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [description, setDescription] = useState('');
+  const [deadline, setDeadline] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim() && client.trim()) {
-      onSubmit(title, client);
+    if (title.trim() && clientId && description.trim() && deadline) {
+      const [year, month, day] = deadline.split('-').map(Number);
+      const deadlineDate = new Date(year, month - 1, day);
+      onSubmit(title, clientId, description, deadlineDate);
     }
   };
 
@@ -243,7 +351,20 @@ const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSubmit, onCan
         </div>
         <div>
           <label htmlFor="client" className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-          <input type="text" id="client" value={client} onChange={e => setClient(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+          <select id="client" value={clientId} onChange={e => setClientId(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 bg-white" required>
+            <option value="" disabled>Selecciona un cliente</option>
+            {clients.map(client => (
+              <option key={client.id} value={client.id}>{client.companyName}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+          <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required></textarea>
+        </div>
+        <div>
+          <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">Fecha Límite de Entrega</label>
+          <input type="date" id="deadline" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
         </div>
       </div>
       <div className="mt-8 flex justify-end space-x-3">
@@ -256,6 +377,58 @@ const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ onSubmit, onCan
     </form>
   );
 };
+
+
+interface CreateClientFormProps {
+  onSubmit: (companyName: string, contactName: string, contactEmail: string, contactPhone: string) => void;
+  onCancel: () => void;
+}
+
+const CreateClientForm: React.FC<CreateClientFormProps> = ({ onSubmit, onCancel }) => {
+  const [companyName, setCompanyName] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (companyName.trim() && contactName.trim() && contactEmail.trim() && contactPhone.trim()) {
+      onSubmit(companyName, contactName, contactEmail, contactPhone);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h2 className="text-2xl font-bold mb-6 text-gray-800">Nuevo Cliente</h2>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+          <input type="text" id="companyName" value={companyName} onChange={e => setCompanyName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+        </div>
+        <div>
+          <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-1">Nombre de Contacto</label>
+          <input type="text" id="contactName" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+        </div>
+        <div>
+          <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-1">Email de Contacto</label>
+          <input type="email" id="contactEmail" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+        </div>
+        <div>
+          <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 mb-1">Teléfono de Contacto</label>
+          <input type="tel" id="contactPhone" value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500" required />
+        </div>
+      </div>
+      <div className="mt-8 flex justify-end space-x-3">
+        <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">Cancelar</button>
+        <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center">
+          <PlusIcon className="w-5 h-5 mr-2" />
+          Crear Cliente
+        </button>
+      </div>
+    </form>
+  );
+};
+
 
 interface UploadDocumentFormProps {
   proposalId: string;
@@ -345,12 +518,13 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel })
             alert('El contenido del archivo no está disponible para descargar.');
             return;
         }
-        const link = document.createElement('a');
+        // FIX: Use `window.document` to avoid conflict with the `document` prop, which was shadowing the global document object.
+        const link = window.document.createElement('a');
         link.href = version.fileContent;
         link.download = version.fileName;
-        document.body.appendChild(link);
+        window.document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        window.document.body.removeChild(link);
     };
 
     return (
