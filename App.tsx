@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry } from './types';
+import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry, Comment } from './types';
 import Header from './components/Header';
 import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
@@ -59,6 +59,9 @@ const initialProposals: Proposal[] = [
         { id: 'hist-1-1', type: 'status', description: 'Estado cambiado de "Borrador" a "Enviado".', timestamp: new Date(2023, 10, 17) },
         { id: 'hist-1-2', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 10, 15) },
     ],
+    comments: [
+      { id: 'comment-1-1', authorId: 'team-3', text: 'Recordar revisar la cotización antes de enviarla al cliente.', createdAt: new Date(2023, 10, 16) }
+    ],
   },
   {
     id: 'prop-2',
@@ -75,6 +78,7 @@ const initialProposals: Proposal[] = [
     history: [
        { id: 'hist-2-1', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 11, 5) },
     ],
+    comments: [],
   },
   {
     id: 'prop-3',
@@ -98,6 +102,7 @@ const initialProposals: Proposal[] = [
     history: [
        { id: 'hist-3-1', type: 'creation', description: 'Propuesta creada.', timestamp: new Date() },
     ],
+    comments: [],
   },
 ];
 
@@ -167,6 +172,7 @@ const App: React.FC = () => {
           timestamp: new Date(),
         }
       ],
+      comments: [],
     };
     setProposals(prev => [newProposal, ...prev]);
     setModalState({ type: null });
@@ -415,6 +421,30 @@ const App: React.FC = () => {
           return updatedProposals;
       });
   };
+
+  const handleAddComment = (proposalId: string, authorId: string, text: string) => {
+    setProposals(prevProposals => {
+        const updatedProposals = prevProposals.map(p => {
+            if (p.id === proposalId) {
+                const newComment: Comment = {
+                    id: `comment-${Date.now()}`,
+                    authorId,
+                    text,
+                    createdAt: new Date(),
+                };
+                const newComments = [newComment, ...(p.comments || [])];
+                return { ...p, comments: newComments };
+            }
+            return p;
+        });
+
+        if (selectedProposal && selectedProposal.id === proposalId) {
+            setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+        }
+        
+        return updatedProposals;
+    });
+  };
   
   const handleMarkNotificationAsRead = (notificationId: string) => {
     setNotifications(prev =>
@@ -535,6 +565,7 @@ const App: React.FC = () => {
             onAssignMember={handleAssignMember}
             onUnassignMember={handleUnassignMember}
             onUpdateAssignedHours={handleUpdateAssignedHours}
+            onAddComment={handleAddComment}
           />
       );
     }

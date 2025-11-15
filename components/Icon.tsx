@@ -130,3 +130,9 @@ export const PlusCircleIcon: React.FC<IconProps> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
+
+export const ChatBubbleLeftRightIcon: React.FC<IconProps> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193l-3.722.537a5.25 5.25 0 01-3.498-1.584l-3.218-3.218a5.25 5.25 0 00-3.498-1.584l-3.722-.537A2.25 2.25 0 011.5 15.082V10.8c0-.97.616-1.813 1.5-2.097m17.25 0a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25m17.25 0c.256.03.507.068.75.111" />
+    </svg>
+);

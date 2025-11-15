@@ -43,6 +43,13 @@ export type ProposalHistoryEntry = {
   timestamp: Date;
 };
 
+export type Comment = {
+  id: string;
+  authorId: string;
+  text: string;
+  createdAt: Date;
+};
+
 export type Proposal = {
   id: string;
   title: string;
@@ -54,6 +61,7 @@ export type Proposal = {
   documents: Document[];
   assignedTeam: AssignedMember[];
   history: ProposalHistoryEntry[];
+  comments: Comment[];
 };
 
 export type Notification = {

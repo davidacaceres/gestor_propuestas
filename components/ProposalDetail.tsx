@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Proposal, Document, ProposalStatus, Client, TeamMember, ProposalHistoryEntryType } from '../types';
-import { ArrowLeftIcon, PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, DownloadIcon, ClockIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon } from './Icon';
+import { Proposal, Document, ProposalStatus, Client, TeamMember, ProposalHistoryEntryType, Comment } from '../types';
+import { ArrowLeftIcon, PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, DownloadIcon, ClockIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon, ChatBubbleLeftRightIcon } from './Icon';
 
 interface ProposalDetailProps {
   proposal: Proposal;
@@ -14,6 +14,7 @@ interface ProposalDetailProps {
   onAssignMember: (proposalId: string, memberId: string, hours: number) => void;
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
+  onAddComment: (proposalId: string, authorId: string, text: string) => void;
 }
 
 const statusClasses: Record<ProposalStatus, string> = {
@@ -32,7 +33,7 @@ const historyTypeMap: Record<ProposalHistoryEntryType, { icon: React.FC<{classNa
 };
 
 
-const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, teamMembers, onBack, onUploadNew, onUploadVersion, onViewHistory, onUpdateStatus, onAssignMember, onUnassignMember, onUpdateAssignedHours }) => {
+const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, teamMembers, onBack, onUploadNew, onUploadVersion, onViewHistory, onUpdateStatus, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment }) => {
   const isArchived = proposal.status === 'Archivado';
   const client = clients.find(c => c.id === proposal.clientId);
   const teamMembersMap = new Map(teamMembers.map(tm => [tm.id, tm]));
@@ -48,6 +49,9 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
   
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [currentHours, setCurrentHours] = useState('');
+
+  const [commentAuthorId, setCommentAuthorId] = useState('');
+  const [commentText, setCommentText] = useState('');
 
 
   const handleAssignSubmit = (e: React.FormEvent) => {
@@ -77,6 +81,14 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
     setEditingMemberId(null);
   };
 
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (commentAuthorId && commentText.trim()) {
+      onAddComment(proposal.id, commentAuthorId, commentText.trim());
+      setCommentAuthorId('');
+      setCommentText('');
+    }
+  };
 
   const handleDownloadLatestVersion = (doc: Document) => {
     const latestVersion = doc.versions[0];
@@ -268,122 +280,193 @@ const ProposalDetail: React.FC<ProposalDetailProps> = ({ proposal, clients, team
                 )}
             </div>
         </div>
-
-        <div className="p-6 sm:p-8">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Documentos</h3>
-            {!isArchived && (
-              <button onClick={onUploadNew} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-                <PlusIcon className="w-5 h-5 mr-2 -ml-1" />
-                Añadir Documento
-              </button>
-            )}
-          </div>
-          <div className="flow-root">
-              <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-                  <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-                      <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
-                          <thead>
-                              <tr>
-                                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-200 sm:pl-0">Nombre del Documento</th>
-                                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Última Versión</th>
-                                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Última Modificación</th>
-                                  <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Acciones</span></th>
-                              </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                              {proposal.documents.map((doc) => (
-                                  <tr key={doc.id}>
-                                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100 sm:pl-0 flex items-center">
-                                          <DocumentIcon className="w-5 h-5 mr-3 text-gray-400 dark:text-gray-500"/>
-                                          {doc.name}
-                                      </td>
-                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                          <span className="font-mono bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">v{doc.versions[0]?.versionNumber || 'N/A'}</span>
-                                      </td>
-                                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{doc.versions[0]?.createdAt.toLocaleString('es-ES') || 'N/A'}</td>
-                                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                                          {!isArchived ? (
-                                              <div className="flex items-center justify-end space-x-4">
-                                                  <button onClick={() => handleDownloadLatestVersion(doc)} className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center" title="Descargar última versión">
-                                                      <DownloadIcon className="w-5 h-5 mr-1" />
-                                                      Descargar
-                                                  </button>
-                                                  <button onClick={() => onUploadVersion(doc.id, doc.name)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 flex items-center" title="Subir nueva versión">
-                                                      <UploadIcon className="w-5 h-5 mr-1" />
-                                                      Nueva Versión
-                                                  </button>
-                                                  <button onClick={() => onViewHistory(doc)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center" title="Ver historial de versiones">
-                                                      <HistoryIcon className="w-5 h-5 mr-1" />
-                                                      Historial
-                                                  </button>
-                                              </div>
-                                          ) : (
-                                              <div className="flex justify-end space-x-4">
-                                                  <button onClick={() => handleDownloadLatestVersion(doc)} className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center" title="Descargar última versión">
-                                                      <DownloadIcon className="w-5 h-5 mr-1" />
-                                                      Descargar
-                                                  </button>
-                                                  <button onClick={() => onViewHistory(doc)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center" title="Ver historial de versiones">
-                                                      <HistoryIcon className="w-5 h-5 mr-1" />
-                                                      Ver Historial
-                                                  </button>
-                                              </div>
-                                          )}
-                                      </td>
-                                  </tr>
-                              ))}
-                               {proposal.documents.length === 0 && (
-                                  <tr>
-                                      <td colSpan={4} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                                          No hay documentos para esta propuesta.
-                                      </td>
-                                  </tr>
-                              )}
-                          </tbody>
-                      </table>
-                  </div>
-              </div>
-          </div>
+      </div>
+      
+      <div className="p-6 sm:p-8">
+        <div className="flex items-center mb-6">
+            <ChatBubbleLeftRightIcon className="w-6 h-6 mr-3 text-gray-500 dark:text-gray-400" />
+            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Comentarios</h3>
         </div>
         
-        <div className="p-6 sm:p-8">
-            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Historial de Actividad</h3>
-            <div className="flow-root">
-                <ul role="list" className="-mb-8">
-                    {proposal.history?.map((entry, entryIdx) => {
-                        const { icon: IconComponent, color } = historyTypeMap[entry.type];
-                        return (
-                        <li key={entry.id}>
-                            <div className="relative pb-8">
-                            {entryIdx !== proposal.history.length - 1 ? (
-                                <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
-                            ) : null}
-                            <div className="relative flex space-x-4">
-                                <div>
-                                <span className={`h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ring-8 ring-white dark:ring-gray-800`}>
-                                    <IconComponent className={`h-5 w-5 ${color}`} aria-hidden="true" />
-                                </span>
-                                </div>
-                                <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                                <div>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">{entry.description}</p>
-                                </div>
-                                <div className="whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400">
-                                    <time dateTime={entry.timestamp.toISOString()}>{entry.timestamp.toLocaleString('es-ES')}</time>
-                                </div>
-                                </div>
+        {!isArchived && (
+            <form onSubmit={handleCommentSubmit} className="mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-1">
+                        <label htmlFor="comment-author" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Autor</label>
+                        <select
+                            id="comment-author"
+                            value={commentAuthorId}
+                            onChange={e => setCommentAuthorId(e.target.value)}
+                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            required
+                        >
+                            <option value="" disabled>Selecciona tu nombre</option>
+                            {teamMembers.map(tm => (
+                                <option key={tm.id} value={tm.id}>{tm.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                         <label htmlFor="comment-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Comentario</label>
+                        <textarea
+                            id="comment-text"
+                            rows={3}
+                            value={commentText}
+                            onChange={e => setCommentText(e.target.value)}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                            placeholder="Escribe tu comentario aquí..."
+                            required
+                        />
+                    </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                     <button type="submit" className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        Publicar Comentario
+                    </button>
+                </div>
+            </form>
+        )}
+
+        <div className="space-y-6">
+            {(proposal.comments || []).map(comment => {
+                const author = teamMembersMap.get(comment.authorId);
+                return (
+                    <div key={comment.id} className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                             <UserGroupIcon className="w-6 h-6 text-gray-500 dark:text-gray-300"/>
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-baseline justify-between">
+                                <p className="font-semibold text-gray-900 dark:text-gray-100">{author?.name || 'Usuario Desconocido'}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{comment.createdAt.toLocaleString('es-ES')}</p>
                             </div>
+                            <div className="mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{comment.text}</p>
                             </div>
-                        </li>
-                        )
-                    })}
-                    {(!proposal.history || proposal.history.length === 0) && (
-                        <p className="text-center py-4 text-gray-500 dark:text-gray-400">No hay actividad registrada.</p>
-                    )}
-                </ul>
+                        </div>
+                    </div>
+                );
+            })}
+            {(!proposal.comments || proposal.comments.length === 0) && (
+                <p className="text-center py-6 text-gray-500 dark:text-gray-400">No hay comentarios todavía. ¡Sé el primero en añadir uno!</p>
+            )}
+        </div>
+      </div>
+
+      <div className="p-6 sm:p-8">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Documentos</h3>
+          {!isArchived && (
+            <button onClick={onUploadNew} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+              <PlusIcon className="w-5 h-5 mr-2 -ml-1" />
+              Añadir Documento
+            </button>
+          )}
+        </div>
+        <div className="flow-root">
+            <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                    <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+                        <thead>
+                            <tr>
+                                <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-200 sm:pl-0">Nombre del Documento</th>
+                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Última Versión</th>
+                                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Última Modificación</th>
+                                <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-0"><span className="sr-only">Acciones</span></th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            {proposal.documents.map((doc) => (
+                                <tr key={doc.id}>
+                                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100 sm:pl-0 flex items-center">
+                                        <DocumentIcon className="w-5 h-5 mr-3 text-gray-400 dark:text-gray-500"/>
+                                        {doc.name}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                        <span className="font-mono bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 px-2 py-1 rounded">v{doc.versions[0]?.versionNumber || 'N/A'}</span>
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{doc.versions[0]?.createdAt.toLocaleString('es-ES') || 'N/A'}</td>
+                                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
+                                        {!isArchived ? (
+                                            <div className="flex items-center justify-end space-x-4">
+                                                <button onClick={() => handleDownloadLatestVersion(doc)} className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center" title="Descargar última versión">
+                                                    <DownloadIcon className="w-5 h-5 mr-1" />
+                                                    Descargar
+                                                </button>
+                                                <button onClick={() => onUploadVersion(doc.id, doc.name)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 flex items-center" title="Subir nueva versión">
+                                                    <UploadIcon className="w-5 h-5 mr-1" />
+                                                    Nueva Versión
+                                                </button>
+                                                <button onClick={() => onViewHistory(doc)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center" title="Ver historial de versiones">
+                                                    <HistoryIcon className="w-5 h-5 mr-1" />
+                                                    Historial
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex justify-end space-x-4">
+                                                <button onClick={() => handleDownloadLatestVersion(doc)} className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center" title="Descargar última versión">
+                                                    <DownloadIcon className="w-5 h-5 mr-1" />
+                                                    Descargar
+                                                </button>
+                                                <button onClick={() => onViewHistory(doc)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center" title="Ver historial de versiones">
+                                                    <HistoryIcon className="w-5 h-5 mr-1" />
+                                                    Ver Historial
+                                                </button>
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                             {proposal.documents.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="text-center py-10 text-gray-500 dark:text-gray-400">
+                                        No hay documentos para esta propuesta.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
+      </div>
+      
+      <div className="p-6 sm:p-8">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Historial de Actividad</h3>
+          <div className="flow-root">
+              <ul role="list" className="-mb-8">
+                  {proposal.history?.map((entry, entryIdx) => {
+                      const { icon: IconComponent, color } = historyTypeMap[entry.type];
+                      return (
+                      <li key={entry.id}>
+                          <div className="relative pb-8">
+                          {entryIdx !== proposal.history.length - 1 ? (
+                              <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
+                          ) : null}
+                          <div className="relative flex space-x-4">
+                              <div>
+                              <span className={`h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ring-8 ring-white dark:ring-gray-800`}>
+                                  <IconComponent className={`h-5 w-5 ${color}`} aria-hidden="true" />
+                              </span>
+                              </div>
+                              <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                              <div>
+                                  <p className="text-sm text-gray-700 dark:text-gray-300">{entry.description}</p>
+                              </div>
+                              <div className="whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400">
+                                  <time dateTime={entry.timestamp.toISOString()}>{entry.timestamp.toLocaleString('es-ES')}</time>
+                              </div>
+                              </div>
+                          </div>
+                          </div>
+                      </li>
+                      )
+                  })}
+                  {(!proposal.history || proposal.history.length === 0) && (
+                      <p className="text-center py-4 text-gray-500 dark:text-gray-400">No hay actividad registrada.</p>
+                  )}
+              </ul>
+          </div>
       </div>
     </div>
   );
