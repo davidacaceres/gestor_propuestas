@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client } from './types';
+import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember } from './types';
 import Header from './components/Header';
 import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
@@ -12,6 +12,13 @@ const initialClients: Client[] = [
   { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
   { id: 'client-2', companyName: 'Quantum Leap Inc.', contactName: 'Carlos García', contactEmail: 'c.garcia@quantumleap.io', contactPhone: '555-0102' },
   { id: 'client-3', companyName: 'Stellar Goods', contactName: 'Laura Martínez', contactEmail: 'laura.m@stellargoods.co', contactPhone: '555-0103' },
+];
+
+const initialTeamMembers: TeamMember[] = [
+  { id: 'team-1', name: 'Juan Rodríguez', role: 'Diseñador UX/UI' },
+  { id: 'team-2', name: 'Sofía López', role: 'Desarrolladora Frontend' },
+  { id: 'team-3', name: 'Miguel Hernández', role: 'Jefe de Proyecto' },
+  { id: 'team-4', name: 'Valentina Gómez', role: 'Especialista en Marketing' },
 ];
 
 const initialProposals: Proposal[] = [
@@ -42,6 +49,10 @@ const initialProposals: Proposal[] = [
         ],
       },
     ],
+    assignedTeam: [
+      { memberId: 'team-1', assignedHours: 40 },
+      { memberId: 'team-2', assignedHours: 80 },
+    ],
   },
   {
     id: 'prop-2',
@@ -52,6 +63,9 @@ const initialProposals: Proposal[] = [
     status: 'Aceptado',
     createdAt: new Date(2023, 11, 5),
     documents: [],
+    assignedTeam: [
+      { memberId: 'team-4', assignedHours: 60 },
+    ],
   },
   {
     id: 'prop-3',
@@ -71,6 +85,7 @@ const initialProposals: Proposal[] = [
         ],
       },
     ],
+    assignedTeam: [],
   },
 ];
 
@@ -79,6 +94,7 @@ type View = 'proposals' | 'clients';
 const App: React.FC = () => {
   const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
   const [clients, setClients] = useState<Client[]>(initialClients);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalState, setModalState] = useState<ModalState>({ type: null });
@@ -95,6 +111,7 @@ const App: React.FC = () => {
       status: 'Borrador',
       createdAt: new Date(),
       documents: [],
+      assignedTeam: [],
     };
     setProposals(prev => [newProposal, ...prev]);
     setModalState({ type: null });
@@ -181,6 +198,57 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAssignMember = (proposalId: string, memberId: string, hours: number) => {
+    const updatedProposals = proposals.map(p => {
+        if (p.id === proposalId) {
+            const newAssignment: AssignedMember = { memberId, assignedHours: hours };
+            if (p.assignedTeam.some(m => m.memberId === memberId)) {
+                return p;
+            }
+            return { ...p, assignedTeam: [...p.assignedTeam, newAssignment] };
+        }
+        return p;
+    });
+
+    setProposals(updatedProposals);
+    if (selectedProposal && selectedProposal.id === proposalId) {
+        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+    }
+  };
+
+  const handleUnassignMember = (proposalId: string, memberId: string) => {
+    const updatedProposals = proposals.map(p => {
+        if (p.id === proposalId) {
+            return {
+                ...p,
+                assignedTeam: p.assignedTeam.filter(m => m.memberId !== memberId)
+            };
+        }
+        return p;
+    });
+    setProposals(updatedProposals);
+    if (selectedProposal && selectedProposal.id === proposalId) {
+        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+    }
+  };
+  
+  const handleUpdateAssignedHours = (proposalId: string, memberId: string, hours: number) => {
+    const updatedProposals = proposals.map(p => {
+        if (p.id === proposalId) {
+            const updatedTeam = p.assignedTeam.map(m =>
+                m.memberId === memberId ? { ...m, assignedHours: hours } : m
+            );
+            return { ...p, assignedTeam: updatedTeam };
+        }
+        return p;
+    });
+
+    setProposals(updatedProposals);
+    if (selectedProposal && selectedProposal.id === proposalId) {
+        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+    }
+  };
+
   const handleSelectProposal = (proposal: Proposal) => {
     setSelectedProposal(proposal);
     setSelectedClient(null); // Clear client context to ensure back button goes to proposal list
@@ -260,11 +328,15 @@ const App: React.FC = () => {
          <ProposalDetail
             proposal={selectedProposal}
             clients={clients}
+            teamMembers={teamMembers}
             onBack={handleBackFromProposalDetail}
             onUploadNew={() => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id } })}
             onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })}
             onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })}
             onUpdateStatus={handleUpdateProposalStatus}
+            onAssignMember={handleAssignMember}
+            onUnassignMember={handleUnassignMember}
+            onUpdateAssignedHours={handleUpdateAssignedHours}
           />
       );
     }

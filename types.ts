@@ -23,6 +23,17 @@ export type Client = {
   contactPhone: string;
 };
 
+export type TeamMember = {
+  id: string;
+  name: string;
+  role: string;
+};
+
+export type AssignedMember = {
+  memberId: string;
+  assignedHours: number;
+};
+
 export type Proposal = {
   id: string;
   title: string;
@@ -32,6 +43,7 @@ export type Proposal = {
   status: ProposalStatus;
   createdAt: Date;
   documents: Document[];
+  assignedTeam: AssignedMember[];
 };
 
 export type ModalState = {
