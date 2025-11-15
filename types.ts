@@ -16,7 +16,7 @@ export type Document = {
 };
 
 export type Client = {
-  id: string;
+  id:string;
   companyName: string;
   contactName: string;
   contactEmail: string;
@@ -47,6 +47,6 @@ export type Proposal = {
 };
 
 export type ModalState = {
-  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | null;
+  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | null;
   data?: any;
 };

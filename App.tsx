@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember } from './types';
 import Header from './components/Header';
@@ -7,7 +6,7 @@ import ProposalDetail from './components/ProposalDetail';
 import ClientList from './components/ClientList';
 import ClientDetail from './components/ClientDetail';
 import Modal from './components/Modal';
-import { PlusIcon, UploadIcon, XIcon, DownloadIcon } from './components/Icon';
+import { PlusIcon, UploadIcon, XIcon, DownloadIcon, ExclamationTriangleIcon } from './components/Icon';
 
 const initialClients: Client[] = [
   { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
@@ -172,7 +171,7 @@ const App: React.FC = () => {
     setModalState({ type: null });
   };
   
-  const handleUpdateProposalStatus = (proposalId: string, status: ProposalStatus) => {
+  const handleConfirmStatusChange = (proposalId: string, status: ProposalStatus) => {
     const originalProposal = proposals.find(p => p.id === proposalId);
     if (!originalProposal) return;
 
@@ -196,6 +195,38 @@ const App: React.FC = () => {
       if (selectedProposal && selectedProposal.id === proposalId) {
         setSelectedProposal(prev => (prev ? { ...prev, status } : null));
       }
+    }
+  };
+
+  const handleStatusChangeRequest = (proposalId: string, newStatus: ProposalStatus) => {
+    const proposal = proposals.find(p => p.id === proposalId);
+    if (!proposal) return;
+
+    const isArchiving = proposal.status !== 'Archivado' && newStatus === 'Archivado';
+    const isUnarchiving = proposal.status === 'Archivado' && newStatus !== 'Archivado';
+
+    if (isArchiving) {
+      setModalState({
+        type: 'confirmAction',
+        data: {
+          title: 'Archivar Propuesta',
+          message: `¿Estás seguro de que quieres archivar la propuesta "${proposal.title}"? No será visible en la lista principal.`,
+          confirmText: 'Archivar',
+          onConfirm: () => handleConfirmStatusChange(proposalId, newStatus),
+        }
+      });
+    } else if (isUnarchiving) {
+      setModalState({
+        type: 'confirmAction',
+        data: {
+          title: 'Desarchivar Propuesta',
+          message: `¿Estás seguro de que quieres desarchivar la propuesta "${proposal.title}"? Volverá a la lista de propuestas activas con el estado "Borrador".`,
+          confirmText: 'Desarchivar',
+          onConfirm: () => handleConfirmStatusChange(proposalId, newStatus),
+        }
+      });
+    } else {
+      handleConfirmStatusChange(proposalId, newStatus);
     }
   };
 
@@ -313,6 +344,19 @@ const App: React.FC = () => {
         );
       case 'viewHistory':
         return <DocumentHistory document={modalState.data.document} onCancel={() => setModalState({ type: null })} />;
+      case 'confirmAction':
+        return (
+          <ConfirmationDialog
+            title={modalState.data.title}
+            message={modalState.data.message}
+            confirmText={modalState.data.confirmText}
+            onConfirm={() => {
+                modalState.data.onConfirm();
+                setModalState({ type: null });
+            }}
+            onCancel={() => setModalState({ type: null })}
+          />
+        );
       default:
         return null;
     }
@@ -334,7 +378,7 @@ const App: React.FC = () => {
             onUploadNew={() => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id } })}
             onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })}
             onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })}
-            onUpdateStatus={handleUpdateProposalStatus}
+            onUpdateStatus={handleStatusChangeRequest}
             onAssignMember={handleAssignMember}
             onUnassignMember={handleUnassignMember}
             onUpdateAssignedHours={handleUpdateAssignedHours}
@@ -591,7 +635,6 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel })
             alert('El contenido del archivo no está disponible para descargar.');
             return;
         }
-        // FIX: Use `window.document` to avoid conflict with the `document` prop, which was shadowing the global document object.
         const link = window.document.createElement('a');
         link.href = version.fileContent;
         link.download = version.fileName;
@@ -650,5 +693,49 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel })
         </div>
     );
 };
+
+interface ConfirmationDialogProps {
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    confirmText?: string;
+    cancelText?: string;
+}
+
+const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar", cancelText = "Cancelar" }) => {
+    return (
+        <div>
+            <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary-100 sm:mx-0 sm:h-10 sm:w-10 dark:bg-primary-900/50">
+                    <ExclamationTriangleIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+                </div>
+                <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                    <h2 className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100" id="modal-title">{title}</h2>
+                    <div className="mt-2">
+                        <p className="text-sm text-gray-500 dark:text-gray-300">{message}</p>
+                    </div>
+                </div>
+            </div>
+            <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                <button
+                    type="button"
+                    onClick={onConfirm}
+                    className="inline-flex w-full justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 sm:ml-3 sm:w-auto"
+                >
+                    {confirmText}
+                </button>
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto dark:bg-gray-700 dark:text-gray-200 dark:ring-gray-600 dark:hover:bg-gray-600"
+                >
+                    {cancelText}
+                </button>
+            </div>
+        </div>
+    );
+};
+
 
 export default App;
