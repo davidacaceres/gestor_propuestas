@@ -46,6 +46,14 @@ export type Proposal = {
   assignedTeam: AssignedMember[];
 };
 
+export type Notification = {
+  id: string;
+  message: string;
+  proposalId: string;
+  read: boolean;
+  createdAt: Date;
+};
+
 export type ModalState = {
   type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | null;
   data?: any;

@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember } from './types';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification } from './types';
 import Header from './components/Header';
 import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
@@ -7,6 +7,7 @@ import ClientList from './components/ClientList';
 import ClientDetail from './components/ClientDetail';
 import Modal from './components/Modal';
 import { PlusIcon, UploadIcon, XIcon, DownloadIcon, ExclamationTriangleIcon } from './components/Icon';
+import NotificationsPanel from './components/NotificationsPanel';
 
 const initialClients: Client[] = [
   { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
@@ -27,7 +28,7 @@ const initialProposals: Proposal[] = [
     title: 'Rediseño del Sitio Web Corporativo',
     clientId: 'client-1',
     description: 'Propuesta completa para el rediseño del sitio web corporativo de Innovatech Solutions, incluyendo UX/UI y desarrollo frontend.',
-    deadline: new Date(2023, 10, 30),
+    deadline: new Date(new Date().setDate(new Date().getDate() + 5)), // Due in 5 days
     status: 'Enviado',
     createdAt: new Date(2023, 10, 15),
     documents: [
@@ -72,7 +73,7 @@ const initialProposals: Proposal[] = [
     title: 'Desarrollo de App Móvil',
     clientId: 'client-3',
     description: 'Desarrollo de una aplicación móvil nativa para iOS y Android para Stellar Goods.',
-    deadline: new Date(2024, 0, 15),
+    deadline: new Date(new Date().setDate(new Date().getDate() + 15)),
     status: 'Borrador',
     createdAt: new Date(),
     documents: [
@@ -95,11 +96,46 @@ const App: React.FC = () => {
   const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalState, setModalState] = useState<ModalState>({ type: null });
   const [showArchived, setShowArchived] = useState(false);
   const [currentView, setCurrentView] = useState<View>('proposals');
+
+  const addNotification = useCallback((message: string, proposalId: string) => {
+    const newNotification: Notification = {
+      id: `notif-${Date.now()}`,
+      message,
+      proposalId,
+      read: false,
+      createdAt: new Date(),
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  }, []);
+
+  useEffect(() => {
+    const now = new Date();
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(now.getDate() + 7);
+
+    const upcomingProposals = proposals.filter(p =>
+      p.status !== 'Archivado' &&
+      p.deadline > now &&
+      p.deadline <= sevenDaysFromNow
+    );
+
+    upcomingProposals.forEach(p => {
+      const notificationExists = notifications.some(
+        n => n.proposalId === p.id && n.message.includes('vence')
+      );
+
+      if (!notificationExists) {
+        const daysRemaining = Math.ceil((p.deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        addNotification(`La propuesta "${p.title}" vence en ${daysRemaining} día(s).`, p.id);
+      }
+    });
+  }, [proposals, notifications, addNotification]);
 
   const handleCreateProposal = (title: string, clientId: string, description: string, deadline: Date) => {
     const newProposal: Proposal = {
@@ -130,8 +166,10 @@ const App: React.FC = () => {
   }
 
   const handleAddOrUpdateDocument = (proposalId: string, documentData: { name: string; file: { name: string; content: string }; notes: string }, documentId?: string) => {
+    let proposalTitle = '';
     const updatedProposals = proposals.map(p => {
       if (p.id === proposalId) {
+        proposalTitle = p.title;
         const newVersion: DocumentVersion = {
           versionNumber: 1, // Default for new docs
           fileName: documentData.file.name,
@@ -169,11 +207,18 @@ const App: React.FC = () => {
     const updatedSelectedProposal = updatedProposals.find(p => p.id === proposalId) || null;
     setSelectedProposal(updatedSelectedProposal);
     setModalState({ type: null });
+
+    const notifMsg = documentId
+      ? `Se subió una nueva versión a "${documentData.name}" en la propuesta "${proposalTitle}".`
+      : `Se añadió el documento "${documentData.name}" a la propuesta "${proposalTitle}".`;
+    addNotification(notifMsg, proposalId);
   };
   
   const handleConfirmStatusChange = (proposalId: string, status: ProposalStatus) => {
     const originalProposal = proposals.find(p => p.id === proposalId);
     if (!originalProposal) return;
+    
+    if (originalProposal.status === status) return;
 
     const wasArchived = originalProposal.status === 'Archivado';
     const isNowArchived = status === 'Archivado';
@@ -185,6 +230,8 @@ const App: React.FC = () => {
       p.id === proposalId ? { ...p, status } : p
     );
     setProposals(updatedProposals);
+
+    addNotification(`El estado de "${originalProposal.title}" cambió a ${status}.`, proposalId);
 
     if (isArchiving) {
       setSelectedProposal(null);
@@ -200,7 +247,7 @@ const App: React.FC = () => {
 
   const handleStatusChangeRequest = (proposalId: string, newStatus: ProposalStatus) => {
     const proposal = proposals.find(p => p.id === proposalId);
-    if (!proposal) return;
+    if (!proposal || proposal.status === newStatus) return;
 
     const isArchiving = proposal.status !== 'Archivado' && newStatus === 'Archivado';
     const isUnarchiving = proposal.status === 'Archivado' && newStatus !== 'Archivado';
@@ -222,7 +269,7 @@ const App: React.FC = () => {
           title: 'Desarchivar Propuesta',
           message: `¿Estás seguro de que quieres desarchivar la propuesta "${proposal.title}"? Volverá a la lista de propuestas activas con el estado "Borrador".`,
           confirmText: 'Desarchivar',
-          onConfirm: () => handleConfirmStatusChange(proposalId, newStatus),
+          onConfirm: () => handleConfirmStatusChange(proposalId, 'Borrador'),
         }
       });
     } else {
@@ -278,6 +325,24 @@ const App: React.FC = () => {
     setProposals(updatedProposals);
     if (selectedProposal && selectedProposal.id === proposalId) {
         setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+    }
+  };
+  
+  const handleMarkNotificationAsRead = (notificationId: string) => {
+    setNotifications(prev =>
+      prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
+    );
+  };
+
+  const handleMarkAllNotificationsAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  };
+  
+  const handleNotificationClick = (notification: Notification) => {
+    handleMarkNotificationAsRead(notification.id);
+    const proposalToSelect = proposals.find(p => p.id === notification.proposalId);
+    if (proposalToSelect) {
+      handleSelectProposal(proposalToSelect);
     }
   };
 
@@ -424,7 +489,13 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen text-gray-800 dark:text-gray-200">
-      <Header currentView={currentView} onNavigate={handleNavigate} />
+      <Header 
+        currentView={currentView} 
+        onNavigate={handleNavigate} 
+        notifications={notifications}
+        onNotificationClick={handleNotificationClick}
+        onMarkAllAsRead={handleMarkAllNotificationsAsRead}
+      />
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
         {renderCurrentView()}
       </main>
@@ -628,7 +699,7 @@ interface DocumentHistoryProps {
     onCancel: () => void;
 }
 
-const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel }) => {
+const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document: doc, onCancel }) => {
     
     const handleDownload = (version: DocumentVersion) => {
         if (!version.fileContent) {
@@ -648,7 +719,7 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel })
             <div className="flex justify-between items-start">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Historial de Versiones</h2>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">"{document.name}"</p>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">"{doc.name}"</p>
                 </div>
                 <button onClick={onCancel} className="p-1 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:hover:bg-gray-700 dark:hover:text-gray-300">
                     <XIcon className="w-6 h-6" />
@@ -656,10 +727,10 @@ const DocumentHistory: React.FC<DocumentHistoryProps> = ({ document, onCancel })
             </div>
             <div className="mt-6 flow-root">
                 <ul role="list" className="-mb-8 max-h-[60vh] overflow-y-auto pr-4">
-                    {document.versions.map((version, versionIdx) => (
+                    {doc.versions.map((version, versionIdx) => (
                         <li key={version.versionNumber}>
                             <div className="relative pb-8">
-                                {versionIdx !== document.versions.length - 1 ? (
+                                {versionIdx !== doc.versions.length - 1 ? (
                                     <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
                                 ) : null}
                                 <div className="relative flex space-x-3 items-start">
