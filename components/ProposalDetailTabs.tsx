@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Proposal, Document, TeamMember, ProposalHistoryEntryType, Comment, User, Role } from '../types';
-import { PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, DownloadIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon, ChatBubbleLeftRightIcon, ArchiveBoxIcon } from './Icon';
+import { Proposal, Document, TeamMember, ProposalHistoryEntryType, Comment, User, Role, Task } from '../types';
+import { PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, DownloadIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon, ChatBubbleLeftRightIcon, ArchiveBoxIcon, ClipboardDocumentListIcon } from './Icon';
 import Pagination from './Pagination';
 import { usePagination } from '../hooks/usePagination';
+import TaskList from './TaskList';
 
 interface ProposalDetailTabsProps {
   proposal: Proposal;
@@ -15,21 +16,26 @@ interface ProposalDetailTabsProps {
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
   onAddComment: (proposalId: string, text: string) => void;
+  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status'>) => void;
+  onUpdateTask: (proposalId: string, taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'createdBy'>>) => void;
+  onDeleteTask: (proposalId: string, taskId: string) => void;
 }
 
-type Tab = 'documents' | 'team' | 'comments' | 'history';
+type Tab = 'documents' | 'tasks' | 'team' | 'comments' | 'history';
 
 const historyTypeMap: Record<ProposalHistoryEntryType, { icon: React.FC<{className?: string}>; color: string }> = {
   creation: { icon: PlusCircleIcon, color: 'text-green-500' },
   status: { icon: TagIcon, color: 'text-blue-500' },
   document: { icon: DocumentIcon, color: 'text-indigo-500' },
   team: { icon: UserGroupIcon, color: 'text-purple-500' },
+  task: { icon: ClipboardDocumentListIcon, color: 'text-teal-500' },
   general: { icon: PencilIcon, color: 'text-amber-500' },
   archive: { icon: ArchiveBoxIcon, color: 'text-gray-500'},
 };
 
 const tabs: { id: Tab; name: string; icon: React.FC<{className?: string}> }[] = [
     { id: 'documents', name: 'Documentos', icon: DocumentIcon },
+    { id: 'tasks', name: 'Tareas', icon: ClipboardDocumentListIcon },
     { id: 'team', name: 'Equipo', icon: UserGroupIcon },
     { id: 'comments', name: 'Comentarios', icon: ChatBubbleLeftRightIcon },
     { id: 'history', name: 'Historial', icon: HistoryIcon },
@@ -41,7 +47,8 @@ interface TabButtonProps {
     onClick: (tab: Tab) => void;
 }
 
-const TabButton = ({ tab, currentTab, onClick }: TabButtonProps) => {
+// FIX: Change component definition to React.FC to allow for 'key' prop.
+const TabButton: React.FC<TabButtonProps> = ({ tab, currentTab, onClick }) => {
     const isActive = tab.id === currentTab;
     const Icon = tab.icon;
     return (
@@ -59,7 +66,8 @@ const TabButton = ({ tab, currentTab, onClick }: TabButtonProps) => {
     );
 };
 
-const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, currentUser, teamMembers, onUploadNew, onUploadVersion, onViewHistory, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment }) => {
+const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = (props) => {
+    const { proposal, currentUser, teamMembers, onUploadNew, onUploadVersion, onViewHistory, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment, onCreateTask, onUpdateTask, onDeleteTask } = props;
     const [activeTab, setActiveTab] = useState<Tab>('documents');
     
     const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
@@ -211,6 +219,17 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                         </div>
                         {docsPagination.totalPages > 1 && <Pagination {...docsPagination} />}
                     </div>
+                )}
+
+                {activeTab === 'tasks' && (
+                    <TaskList 
+                        proposal={proposal} 
+                        teamMembers={teamMembers}
+                        currentUser={currentUser}
+                        onCreateTask={onCreateTask} 
+                        onUpdateTask={onUpdateTask}
+                        onDeleteTask={onDeleteTask}
+                    />
                 )}
 
                 {activeTab === 'team' && (

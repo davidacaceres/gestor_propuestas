@@ -45,7 +45,7 @@ export type AssignedMember = {
   assignedHours: number;
 };
 
-export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'team' | 'general' | 'archive';
+export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'team' | 'general' | 'archive' | 'task';
 
 export type ProposalHistoryEntry = {
   id: string;
@@ -62,6 +62,19 @@ export type Comment = {
   createdAt: Date;
 };
 
+export type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
+
+export type Task = {
+  id: string;
+  title: string;
+  description?: string;
+  assignedToId?: string;
+  dueDate?: Date;
+  status: TaskStatus;
+  createdAt: Date;
+  createdBy: string;
+};
+
 export type Proposal = {
   id: string;
   title: string;
@@ -76,6 +89,7 @@ export type Proposal = {
   assignedTeam: AssignedMember[];
   history: ProposalHistoryEntry[];
   comments: Comment[];
+  tasks: Task[];
   leaderId?: string;
 };
 

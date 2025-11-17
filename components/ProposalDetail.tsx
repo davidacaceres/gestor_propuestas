@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Proposal, Client, TeamMember, ProposalStatus, Document, User, Role } from '../types';
+import { Proposal, Client, TeamMember, ProposalStatus, Document, User, Role, Task } from '../types';
 import { ArrowLeftIcon, ClockIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, PencilIcon, FireIcon } from './Icon';
 import ProposalDetailTabs from './ProposalDetailTabs';
 
@@ -20,6 +20,9 @@ interface ProposalDetailProps {
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
   onAddComment: (proposalId: string, text: string) => void;
+  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status'>) => void;
+  onUpdateTask: (proposalId: string, taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'createdBy'>>) => void;
+  onDeleteTask: (proposalId: string, taskId: string) => void;
 }
 
 const statusClasses: Record<ProposalStatus, string> = {
