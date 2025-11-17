@@ -1,21 +1,36 @@
 import React, { useState } from 'react';
 import { PlusIcon } from './Icon';
+import { Role, User } from '../types';
 
 interface CreateTeamMemberFormProps {
-  onSubmit: (name: string, role: string, alias?: string, email?: string) => void;
+  currentUser: User | null;
+  onSubmit: (name: string, role: string, alias: string | undefined, email: string | undefined, roles: Role[]) => void;
   onCancel: () => void;
 }
 
-const CreateTeamMemberForm: React.FC<CreateTeamMemberFormProps> = ({ onSubmit, onCancel }) => {
+const ALL_ROLES: Role[] = ['Admin', 'ProjectManager', 'TeamMember'];
+
+const CreateTeamMemberForm: React.FC<CreateTeamMemberFormProps> = ({ currentUser, onSubmit, onCancel }) => {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [alias, setAlias] = useState('');
   const [email, setEmail] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<Role[]>(['TeamMember']);
+
+  const isAdmin = currentUser?.roles.includes('Admin');
+
+  const handleRoleChange = (role: Role) => {
+    setSelectedRoles(prev => 
+      prev.includes(role) 
+      ? prev.filter(r => r !== role) 
+      : [...prev, role]
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && role.trim()) {
-      onSubmit(name.trim(), role.trim(), alias.trim() || undefined, email.trim() || undefined);
+      onSubmit(name.trim(), role.trim(), alias.trim() || undefined, email.trim() || undefined, selectedRoles);
     }
   };
 
@@ -39,6 +54,30 @@ const CreateTeamMemberForm: React.FC<CreateTeamMemberFormProps> = ({ onSubmit, o
           <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Electrónico</label>
           <input type="email" id="memberEmail" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="ejemplo@correo.com" />
         </div>
+        
+        {isAdmin && (
+          <div className="pt-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Roles del Sistema</label>
+            <div className="mt-2 space-y-2">
+              {ALL_ROLES.map(roleValue => (
+                <div key={roleValue} className="flex items-center">
+                  <input
+                    id={`role-${roleValue}`}
+                    name="roles"
+                    type="checkbox"
+                    value={roleValue}
+                    checked={selectedRoles.includes(roleValue)}
+                    onChange={() => handleRoleChange(roleValue)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:bg-gray-600 dark:border-gray-500"
+                  />
+                  <label htmlFor={`role-${roleValue}`} className="ml-3 text-sm text-gray-600 dark:text-gray-300">
+                    {roleValue}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div className="mt-8 flex justify-end space-x-3">
         <button type="button" onClick={onCancel} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>

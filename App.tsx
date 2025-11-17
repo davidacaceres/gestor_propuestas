@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry, Comment } from './types';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry, Comment, User, Role } from './types';
 import Header from './components/Header';
 import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
@@ -15,6 +15,7 @@ import DocumentHistory from './components/DocumentHistory';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import EditClientForm from './components/EditClientForm';
 import EditTeamMemberForm from './components/EditTeamMemberForm';
+import LoginScreen from './components/LoginScreen';
 
 const initialClients: Client[] = [
   { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
@@ -23,10 +24,10 @@ const initialClients: Client[] = [
 ];
 
 const initialTeamMembers: TeamMember[] = [
-  { id: 'team-1', name: 'Juan Rodríguez', role: 'Diseñador UX/UI', alias: 'juanux', email: 'juan.r@example.com' },
-  { id: 'team-2', name: 'Sofía López', role: 'Desarrolladora Frontend', alias: 'sofi', email: 'sofia.l@example.com' },
-  { id: 'team-3', name: 'Miguel Hernández', role: 'Jefe de Proyecto', alias: 'mike', email: 'miguel.h@example.com' },
-  { id: 'team-4', name: 'Valentina Gómez', role: 'Especialista en Marketing', alias: 'vale', email: 'valentina.g@example.com' },
+  { id: 'team-1', name: 'Juan Rodríguez', role: 'Diseñador UX/UI', alias: 'juanux', email: 'juan.r@example.com', roles: ['TeamMember'] },
+  { id: 'team-2', name: 'Sofía López', role: 'Desarrolladora Frontend', alias: 'sofi', email: 'sofia.l@example.com', roles: ['TeamMember'] },
+  { id: 'team-3', name: 'Miguel Hernández', role: 'Jefe de Proyecto', alias: 'mike', email: 'miguel.h@example.com', roles: ['Admin'] },
+  { id: 'team-4', name: 'Valentina Gómez', role: 'Especialista en Marketing', alias: 'vale', email: 'valentina.g@example.com', roles: ['ProjectManager', 'TeamMember'] },
 ];
 
 const initialProposals: Proposal[] = [
@@ -64,8 +65,8 @@ const initialProposals: Proposal[] = [
       { memberId: 'team-2', assignedHours: 80 },
     ],
     history: [
-        { id: 'hist-1-1', type: 'status', description: 'Estado cambiado de "Borrador" a "Enviado".', timestamp: new Date(2023, 10, 17) },
-        { id: 'hist-1-2', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 10, 15) },
+        { id: 'hist-1-1', authorId: 'team-2', type: 'status', description: 'Estado cambiado de "Borrador" a "Enviado".', timestamp: new Date(2023, 10, 17) },
+        { id: 'hist-1-2', authorId: 'team-3', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 10, 15) },
     ],
     comments: [
       { id: 'comment-1-1', authorId: 'team-3', text: 'Recordar revisar la cotización antes de enviarla al cliente.', createdAt: new Date(2023, 10, 16) }
@@ -86,7 +87,7 @@ const initialProposals: Proposal[] = [
       { memberId: 'team-4', assignedHours: 60 },
     ],
     history: [
-       { id: 'hist-2-1', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 11, 5) },
+       { id: 'hist-2-1', authorId: 'team-4', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 11, 5) },
     ],
     comments: [],
   },
@@ -112,7 +113,7 @@ const initialProposals: Proposal[] = [
     ],
     assignedTeam: [],
     history: [
-       { id: 'hist-3-1', type: 'creation', description: 'Propuesta creada.', timestamp: new Date() },
+       { id: 'hist-3-1', authorId: 'team-2', type: 'creation', description: 'Propuesta creada.', timestamp: new Date() },
     ],
     comments: [],
   },
@@ -121,6 +122,7 @@ const initialProposals: Proposal[] = [
 type View = 'proposals' | 'clients' | 'team';
 
 const App: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>(initialProposals);
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(initialTeamMembers);
@@ -130,6 +132,23 @@ const App: React.FC = () => {
   const [modalState, setModalState] = useState<ModalState>({ type: null });
   const [showArchived, setShowArchived] = useState(false);
   const [currentView, setCurrentView] = useState<View>('proposals');
+
+  // Permissions helpers
+  const hasRole = useCallback((role: Role) => currentUser?.roles.includes(role) ?? false, [currentUser]);
+  const canViewAllProposals = useMemo(() => hasRole('Admin') || hasRole('ProjectManager'), [hasRole]);
+  
+  const users: User[] = teamMembers.map(tm => ({ id: tm.id, name: tm.name, roles: tm.roles }));
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setSelectedProposal(null);
+    setSelectedClient(null);
+    setCurrentView('proposals');
+  };
 
   const addNotification = useCallback((message: string, proposalId: string) => {
     const newNotification: Notification = {
@@ -166,6 +185,7 @@ const App: React.FC = () => {
   }, [proposals, notifications, addNotification]);
 
   const handleCreateProposal = (title: string, clientId: string, description: string, deadline: Date, alertDate?: Date) => {
+    if (!currentUser) return;
     const newProposal: Proposal = {
       id: `prop-${Date.now()}`,
       title,
@@ -180,6 +200,7 @@ const App: React.FC = () => {
       history: [
         {
           id: `hist-${Date.now()}`,
+          authorId: currentUser.id,
           type: 'creation',
           description: 'Propuesta creada.',
           timestamp: new Date(),
@@ -209,21 +230,24 @@ const App: React.FC = () => {
   };
 
   const handleDeleteClient = (clientId: string) => {
-    const isClientInUse = proposals.some(p => p.clientId === clientId);
-    if (isClientInUse) {
-      alert('No se puede eliminar este cliente porque está asociado a una o más propuestas.');
-      return;
+    if (!hasRole('Admin')) {
+        const isClientInUse = proposals.some(p => p.clientId === clientId);
+        if (isClientInUse) {
+        alert('No se puede eliminar este cliente porque está asociado a una o más propuestas.');
+        return;
+        }
     }
     setClients(prev => prev.filter(c => c.id !== clientId));
   };
 
-  const handleCreateTeamMember = (name: string, role: string, alias?: string, email?: string) => {
+  const handleCreateTeamMember = (name: string, role: string, alias: string | undefined, email: string | undefined, roles: Role[]) => {
     const newMember: TeamMember = {
       id: `team-${Date.now()}`,
       name,
       role,
       alias,
       email,
+      roles: roles.length > 0 ? roles : ['TeamMember'],
     };
     setTeamMembers(prev => [newMember, ...prev]);
     setModalState({ type: null });
@@ -235,12 +259,14 @@ const App: React.FC = () => {
   };
 
   const handleDeleteTeamMember = (memberId: string) => {
-    const isMemberInUse = proposals.some(
-      p => p.leaderId === memberId || p.assignedTeam.some(at => at.memberId === memberId)
-    );
-    if (isMemberInUse) {
-      alert('No se puede eliminar este miembro porque está asignado como líder o participante en una o más propuestas.');
-      return;
+    if (!hasRole('Admin')) {
+        const isMemberInUse = proposals.some(
+            p => p.leaderId === memberId || p.assignedTeam.some(at => at.memberId === memberId)
+        );
+        if (isMemberInUse) {
+            alert('No se puede eliminar este miembro porque está asignado como líder o participante en una o más propuestas.');
+            return;
+        }
     }
     setTeamMembers(prev => prev.filter(tm => tm.id !== memberId));
   };
@@ -248,7 +274,6 @@ const App: React.FC = () => {
   const handleImportTeamMembers = (fileContent: string) => {
     try {
         const lines = fileContent.trim().split('\n');
-        // Add explicit return type `TeamMember | null` to map function to fix type inference issue for the filter.
         const newMembers: TeamMember[] = lines.map((line, index): TeamMember | null => {
             const [name, role, alias, email] = line.split(',').map(field => field ? field.trim() : '');
             if (!name || !role) {
@@ -261,6 +286,7 @@ const App: React.FC = () => {
                 role,
                 alias: alias || undefined,
                 email: email || undefined,
+                roles: ['TeamMember'], // Default role for imported users
             };
         }).filter((member): member is TeamMember => member !== null);
 
@@ -277,6 +303,7 @@ const App: React.FC = () => {
   };
 
   const handleAddOrUpdateDocument = (proposalId: string, documentData: { name: string; file: { name: string; content: string }; notes: string }, documentId?: string) => {
+    if (!currentUser) return;
     let proposalTitle = '';
     
     setProposals(prevProposals => {
@@ -317,6 +344,7 @@ const App: React.FC = () => {
                 
                 const newEntry: ProposalHistoryEntry = {
                     id: `hist-${Date.now()}`,
+                    authorId: currentUser.id,
                     type: 'document',
                     description: historyDescription,
                     timestamp: new Date(),
@@ -341,6 +369,7 @@ const App: React.FC = () => {
   };
   
   const handleConfirmStatusChange = (proposalId: string, status: ProposalStatus) => {
+      if (!currentUser) return;
       const originalProposal = proposals.find(p => p.id === proposalId);
       if (!originalProposal) return;
       
@@ -357,6 +386,7 @@ const App: React.FC = () => {
               if (p.id === proposalId) {
                   const newEntry: ProposalHistoryEntry = {
                       id: `hist-${Date.now()}`,
+                      authorId: currentUser.id,
                       type: 'status',
                       description: `Estado cambiado de "${originalProposal.status}" a "${status}".`,
                       timestamp: new Date(),
@@ -418,6 +448,7 @@ const App: React.FC = () => {
   };
 
   const handleConfirmLeaderChange = (proposalId: string, leaderId: string) => {
+    if (!currentUser) return;
     const leader = teamMembers.find(tm => tm.id === leaderId);
     if (!leader) return;
 
@@ -433,6 +464,7 @@ const App: React.FC = () => {
 
                 const newEntry: ProposalHistoryEntry = {
                     id: `hist-${Date.now()}`,
+                    authorId: currentUser.id,
                     type: 'team',
                     description,
                     timestamp: new Date(),
@@ -470,6 +502,7 @@ const App: React.FC = () => {
   };
 
   const handleAssignMember = (proposalId: string, memberId: string, hours: number) => {
+    if (!currentUser) return;
     const member = teamMembers.find(tm => tm.id === memberId);
     if (!member) return;
 
@@ -482,6 +515,7 @@ const App: React.FC = () => {
                 const newAssignment: AssignedMember = { memberId, assignedHours: hours };
                 const newEntry: ProposalHistoryEntry = {
                     id: `hist-${Date.now()}`,
+                    authorId: currentUser.id,
                     type: 'team',
                     description: `"${member.name}" fue asignado al equipo con ${hours} horas.`,
                     timestamp: new Date(),
@@ -500,6 +534,7 @@ const App: React.FC = () => {
   };
 
   const handleUnassignMember = (proposalId: string, memberId: string) => {
+      if (!currentUser) return;
       const member = teamMembers.find(tm => tm.id === memberId);
       if (!member) return;
       
@@ -508,6 +543,7 @@ const App: React.FC = () => {
               if (p.id === proposalId) {
                   const newEntry: ProposalHistoryEntry = {
                       id: `hist-${Date.now()}`,
+                      authorId: currentUser.id,
                       type: 'team',
                       description: `"${member.name}" fue quitado del equipo.`,
                       timestamp: new Date(),
@@ -530,6 +566,7 @@ const App: React.FC = () => {
   };
   
   const handleUpdateAssignedHours = (proposalId: string, memberId: string, hours: number) => {
+      if (!currentUser) return;
       const member = teamMembers.find(tm => tm.id === memberId);
       if (!member) return;
 
@@ -540,6 +577,7 @@ const App: React.FC = () => {
                   const oldHours = oldAssignment ? oldAssignment.assignedHours : '?';
                   const newEntry: ProposalHistoryEntry = {
                       id: `hist-${Date.now()}`,
+                      authorId: currentUser.id,
                       type: 'team',
                       description: `Horas de "${member.name}" actualizadas de ${oldHours} a ${hours}.`,
                       timestamp: new Date(),
@@ -564,6 +602,7 @@ const App: React.FC = () => {
     proposalId: string,
     details: { title: string; description: string; deadline: Date; alertDate?: Date }
   ) => {
+    if (!currentUser) return;
     setProposals(prevProposals => {
       const originalProposal = prevProposals.find(p => p.id === proposalId);
       if (!originalProposal) return prevProposals;
@@ -585,6 +624,7 @@ const App: React.FC = () => {
         if (p.id === proposalId) {
           const newEntry: ProposalHistoryEntry = {
             id: `hist-${Date.now()}`,
+            authorId: currentUser.id,
             type: 'general',
             description,
             timestamp: new Date(),
@@ -611,13 +651,14 @@ const App: React.FC = () => {
     });
   };
 
-  const handleAddComment = (proposalId: string, authorId: string, text: string) => {
+  const handleAddComment = (proposalId: string, text: string) => {
+    if (!currentUser) return;
     setProposals(prevProposals => {
         const updatedProposals = prevProposals.map(p => {
             if (p.id === proposalId) {
                 const newComment: Comment = {
                     id: `comment-${Date.now()}`,
-                    authorId,
+                    authorId: currentUser.id,
                     text,
                     createdAt: new Date(),
                 };
@@ -693,6 +734,9 @@ const App: React.FC = () => {
   }
 
   const handleNavigate = (view: View) => {
+    if (view === 'clients' && !hasRole('Admin') && !hasRole('ProjectManager')) return;
+    if (view === 'team' && !hasRole('Admin')) return;
+    
     setCurrentView(view);
     setSelectedProposal(null);
     setSelectedClient(null);
@@ -707,9 +751,9 @@ const App: React.FC = () => {
       case 'editClient':
         return <EditClientForm client={modalState.data.client} onSubmit={handleUpdateClient} onCancel={() => setModalState({ type: null })} />;
       case 'createTeamMember':
-        return <CreateTeamMemberForm onSubmit={handleCreateTeamMember} onCancel={() => setModalState({ type: null })} />;
+        return <CreateTeamMemberForm currentUser={currentUser} onSubmit={handleCreateTeamMember} onCancel={() => setModalState({ type: null })} />;
       case 'editTeamMember':
-        return <EditTeamMemberForm member={modalState.data.member} onSubmit={handleUpdateTeamMember} onCancel={() => setModalState({ type: null })} />;
+        return <EditTeamMemberForm currentUser={currentUser} member={modalState.data.member} onSubmit={handleUpdateTeamMember} onCancel={() => setModalState({ type: null })} />;
       case 'uploadDocument':
         return (
           <UploadDocumentForm
@@ -740,9 +784,21 @@ const App: React.FC = () => {
     }
   };
 
-  const visibleProposals = proposals.filter(p => 
-    showArchived ? p.status === 'Archivado' : p.status !== 'Archivado'
-  );
+  const visibleProposals = useMemo(() => {
+    const filteredByArchive = proposals.filter(p => 
+        showArchived ? p.status === 'Archivado' : p.status !== 'Archivado'
+    );
+
+    if (canViewAllProposals || !currentUser) {
+        return filteredByArchive;
+    }
+
+    return filteredByArchive.filter(p => 
+        p.leaderId === currentUser.id || 
+        p.assignedTeam.some(m => m.memberId === currentUser.id)
+    );
+  }, [proposals, showArchived, currentUser, canViewAllProposals]);
+
 
   const renderCurrentView = () => {
     // A selected proposal always has rendering priority
@@ -750,6 +806,7 @@ const App: React.FC = () => {
       return (
          <ProposalDetail
             proposal={selectedProposal}
+            currentUser={currentUser}
             clients={clients}
             teamMembers={teamMembers}
             onBack={handleBackFromProposalDetail}
@@ -774,6 +831,7 @@ const App: React.FC = () => {
             proposals={visibleProposals}
             clients={clients}
             teamMembers={teamMembers}
+            currentUser={currentUser}
             onSelectProposal={handleSelectProposal}
             onCreateProposal={() => setModalState({ type: 'createProposal' })}
             showArchived={showArchived}
@@ -794,13 +852,14 @@ const App: React.FC = () => {
         }
         return (
           <ClientList 
-            clients={clients} 
+            clients={clients}
+            currentUser={currentUser}
             onSelectClient={handleSelectClient}
             onCreateClient={() => setModalState({ type: 'createClient' })} 
             onEditClient={(client) => setModalState({ type: 'editClient', data: { client } })}
             onDeleteClient={(client) => setModalState({ type: 'confirmAction', data: {
               title: 'Eliminar Cliente',
-              message: `¿Estás seguro de que quieres eliminar a "${client.companyName}"? Esta acción no se puede deshacer.`,
+              message: `¿Estás seguro de que quieres eliminar a "${client.companyName}"? ${hasRole('Admin') ? 'Esta acción no se puede deshacer.' : ''}`,
               confirmText: 'Eliminar',
               onConfirm: () => handleDeleteClient(client.id)
             }})}
@@ -810,12 +869,13 @@ const App: React.FC = () => {
         return (
           <TeamList
             teamMembers={teamMembers}
+            currentUser={currentUser}
             onCreateTeamMember={() => setModalState({ type: 'createTeamMember' })}
             onImportTeamMembers={handleImportTeamMembers}
             onEditTeamMember={(member) => setModalState({ type: 'editTeamMember', data: { member } })}
             onDeleteTeamMember={(member) => setModalState({ type: 'confirmAction', data: {
               title: 'Eliminar Miembro',
-              message: `¿Estás seguro de que quieres eliminar a "${member.name}"? Esta acción no se puede deshacer.`,
+              message: `¿Estás seguro de que quieres eliminar a "${member.name}"? ${hasRole('Admin') ? 'Esta acción no se puede deshacer.' : ''}`,
               confirmText: 'Eliminar',
               onConfirm: () => handleDeleteTeamMember(member.id)
             }})}
@@ -826,9 +886,15 @@ const App: React.FC = () => {
     }
   };
 
+  if (!currentUser) {
+    return <LoginScreen users={users} onLogin={handleLogin} />;
+  }
+
   return (
     <div className="min-h-screen text-gray-800 dark:text-gray-200">
       <Header 
+        currentUser={currentUser}
+        onLogout={handleLogout}
         currentView={currentView} 
         onNavigate={handleNavigate} 
         notifications={notifications}

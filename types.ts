@@ -1,5 +1,13 @@
 export type ProposalStatus = 'Borrador' | 'Enviado' | 'Aceptado' | 'Rechazado' | 'Archivado';
 
+export type Role = 'Admin' | 'ProjectManager' | 'TeamMember';
+
+export type User = {
+  id: string;
+  name: string;
+  roles: Role[];
+};
+
 export type DocumentVersion = {
   versionNumber: number;
   fileName: string;
@@ -29,6 +37,7 @@ export type TeamMember = {
   role: string;
   alias?: string;
   email?: string;
+  roles: Role[];
 };
 
 export type AssignedMember = {
@@ -40,6 +49,7 @@ export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'tea
 
 export type ProposalHistoryEntry = {
   id: string;
+  authorId: string;
   type: ProposalHistoryEntryType;
   description: string;
   timestamp: Date;

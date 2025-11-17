@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileTextIcon, UserGroupIcon, BellIcon, UsersIcon } from './Icon';
-import { Notification } from '../types';
+import { FileTextIcon, UserGroupIcon, BellIcon, UsersIcon, UserIcon } from './Icon';
+import { Notification, User, Role } from '../types';
 import NotificationsPanel from './NotificationsPanel';
 
 type View = 'proposals' | 'clients' | 'team';
 
 interface HeaderProps {
+  currentUser: User;
+  onLogout: () => void;
   currentView: View;
   onNavigate: (view: View) => void;
   notifications: Notification[];
@@ -13,11 +15,15 @@ interface HeaderProps {
   onMarkAllAsRead: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, notifications, onNotificationClick, onMarkAllAsRead }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, currentView, onNavigate, notifications, onNotificationClick, onMarkAllAsRead }) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const unreadCount = notifications.filter(n => !n.read).length;
   
   const panelRef = useRef<HTMLDivElement>(null);
+  
+  const hasRole = (role: Role) => currentUser.roles.includes(role);
+  const canSeeClients = hasRole('Admin') || hasRole('ProjectManager');
+  const canSeeTeam = hasRole('Admin');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -55,23 +61,27 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, notifications,
                 <FileTextIcon className="-ml-0.5 mr-2 h-5 w-5" />
                 Propuestas
               </button>
-              <button
-                onClick={() => onNavigate('clients')}
-                className={`${navItemClasses} ${currentView === 'clients' ? activeClasses : inactiveClasses}`}
-              >
-                <UserGroupIcon className="-ml-0.5 mr-2 h-5 w-5" />
-                Clientes
-              </button>
-              <button
-                onClick={() => onNavigate('team')}
-                className={`${navItemClasses} ${currentView === 'team' ? activeClasses : inactiveClasses}`}
-              >
-                <UsersIcon className="-ml-0.5 mr-2 h-5 w-5" />
-                Equipo
-              </button>
+              {canSeeClients && (
+                <button
+                  onClick={() => onNavigate('clients')}
+                  className={`${navItemClasses} ${currentView === 'clients' ? activeClasses : inactiveClasses}`}
+                >
+                  <UserGroupIcon className="-ml-0.5 mr-2 h-5 w-5" />
+                  Clientes
+                </button>
+              )}
+              {canSeeTeam && (
+                <button
+                  onClick={() => onNavigate('team')}
+                  className={`${navItemClasses} ${currentView === 'team' ? activeClasses : inactiveClasses}`}
+                >
+                  <UsersIcon className="-ml-0.5 mr-2 h-5 w-5" />
+                  Equipo
+                </button>
+              )}
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center space-x-4">
              <div className="relative" ref={panelRef}>
                 <button 
                   onClick={() => setIsPanelOpen(prev => !prev)}
@@ -91,6 +101,19 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, notifications,
                      onMarkAllAsRead={onMarkAllAsRead}
                    />
                 )}
+             </div>
+             <div className="h-8 w-px bg-gray-200 dark:bg-gray-600 hidden sm:block"></div>
+             <div className="flex items-center">
+                <div className="flex items-center mr-3">
+                    <UserIcon className="h-6 w-6 text-gray-500 dark:text-gray-400"/>
+                    <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:block">{currentUser.name}</span>
+                </div>
+                <button 
+                    onClick={onLogout}
+                    className="text-sm font-medium text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400"
+                >
+                    Cerrar Sesión
+                </button>
              </div>
           </div>
         </div>

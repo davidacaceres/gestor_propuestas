@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Proposal, Client, TeamMember, ProposalStatus, Document } from '../types';
+import { Proposal, Client, TeamMember, ProposalStatus, Document, User, Role } from '../types';
 import { ArrowLeftIcon, ClockIcon, ArchiveBoxIcon, ArrowUturnLeftIcon, PencilIcon, FireIcon } from './Icon';
 import ProposalDetailTabs from './ProposalDetailTabs';
 
 interface ProposalDetailProps {
   proposal: Proposal;
+  currentUser: User | null;
   clients: Client[];
   teamMembers: TeamMember[];
   onBack: () => void;
@@ -17,7 +18,7 @@ interface ProposalDetailProps {
   onAssignMember: (proposalId: string, memberId: string, hours: number) => void;
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
-  onAddComment: (proposalId: string, authorId: string, text: string) => void;
+  onAddComment: (proposalId: string, text: string) => void;
 }
 
 const statusClasses: Record<ProposalStatus, string> = {
@@ -29,7 +30,7 @@ const statusClasses: Record<ProposalStatus, string> = {
 };
 
 const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
-  const { proposal, clients, teamMembers, onBack, onUpdateStatus, onUpdateProposalLeader, onUpdateProposalDetails } = props;
+  const { proposal, currentUser, clients, teamMembers, onBack, onUpdateStatus, onUpdateProposalLeader, onUpdateProposalDetails } = props;
   
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(proposal.title);
@@ -38,8 +39,13 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
   const [editedAlertDate, setEditedAlertDate] = useState(proposal.alertDate ? new Date(proposal.alertDate).toISOString().split('T')[0] : '');
   const [editError, setEditError] = useState('');
 
+  const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
+  const canManageProposal = hasRole('Admin') || hasRole('ProjectManager');
+
   const isArchived = proposal.status === 'Archivado';
-  const canEdit = !isArchived && proposal.status !== 'Enviado';
+  const canEditDetails = !isArchived && canManageProposal;
+  const canChangeStatus = !isArchived && canManageProposal;
+
   const client = clients.find(c => c.id === proposal.clientId);
   const leader = proposal.leaderId ? teamMembers.find(tm => tm.id === proposal.leaderId) : null;
   
@@ -130,7 +136,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                     <button onClick={handleCancel} className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500">Cancelar</button>
                   </div>
                 ) : (
-                  canEdit && (
+                  canEditDetails && (
                     <button onClick={handleEdit} className="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                       <PencilIcon className="w-5 h-5 mr-2 -ml-1" />
                       Editar Propuesta
@@ -145,13 +151,15 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                     <ArchiveBoxIcon className="w-5 h-5 mr-2" />
                     Archivado
                   </span>
-                  <button
-                    onClick={() => onUpdateStatus(proposal.id, 'Borrador')}
-                    className="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                  >
-                    <ArrowUturnLeftIcon className="w-5 h-5 mr-2 -ml-1" />
-                    Desarchivar
-                  </button>
+                  {canManageProposal && (
+                    <button
+                      onClick={() => onUpdateStatus(proposal.id, 'Borrador')}
+                      className="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    >
+                      <ArrowUturnLeftIcon className="w-5 h-5 mr-2 -ml-1" />
+                      Desarchivar
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -162,7 +170,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
                     id="status"
                     name="status"
                     value={proposal.status}
-                    disabled={isEditing}
+                    disabled={isEditing || !canChangeStatus}
                     onChange={(e) => onUpdateStatus(proposal.id, e.target.value as ProposalStatus)}
                     className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md font-medium dark:border-gray-600 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500 disabled:opacity-50 disabled:cursor-not-allowed ${statusClasses[proposal.status]}`}
                   >
@@ -176,7 +184,7 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
               )}
                <div className="mt-4">
                   <label htmlFor="leader" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Líder de la Propuesta</label>
-                  {isArchived ? (
+                  {(isArchived || !canManageProposal) ? (
                       <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">{leader?.name || 'No asignado'}</p>
                   ) : (
                       <select

@@ -1,17 +1,27 @@
 import React, { useRef } from 'react';
-import { TeamMember } from '../types';
+import { TeamMember, User, Role } from '../types';
 import { PlusIcon, UsersIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon } from './Icon';
 
 interface TeamListProps {
   teamMembers: TeamMember[];
+  currentUser: User | null;
   onCreateTeamMember: () => void;
   onImportTeamMembers: (fileContent: string) => void;
   onEditTeamMember: (member: TeamMember) => void;
   onDeleteTeamMember: (member: TeamMember) => void;
 }
 
-const TeamList: React.FC<TeamListProps> = ({ teamMembers, onCreateTeamMember, onImportTeamMembers, onEditTeamMember, onDeleteTeamMember }) => {
+const roleClasses: Record<Role, string> = {
+  'Admin': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+  'ProjectManager': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+  'TeamMember': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+};
+
+const TeamList: React.FC<TeamListProps> = ({ teamMembers, currentUser, onCreateTeamMember, onImportTeamMembers, onEditTeamMember, onDeleteTeamMember }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
+  const canManageTeam = hasRole('Admin');
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -34,29 +44,31 @@ const TeamList: React.FC<TeamListProps> = ({ teamMembers, onCreateTeamMember, on
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Miembros del Equipo</h2>
-        <div className="flex items-center space-x-4">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept=".csv"
-            />
-            <button
-              onClick={handleImportClick}
-              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              <ArrowDownTrayIcon className="w-5 h-5 mr-2 -ml-1" />
-              Importar desde CSV
-            </button>
-            <button
-              onClick={onCreateTeamMember}
-              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-            >
-              <PlusIcon className="w-5 h-5 mr-2 -ml-1" />
-              Nuevo Miembro
-            </button>
-        </div>
+        {canManageTeam && (
+          <div className="flex items-center space-x-4">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept=".csv"
+              />
+              <button
+                onClick={handleImportClick}
+                className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              >
+                <ArrowDownTrayIcon className="w-5 h-5 mr-2 -ml-1" />
+                Importar desde CSV
+              </button>
+              <button
+                onClick={onCreateTeamMember}
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+              >
+                <PlusIcon className="w-5 h-5 mr-2 -ml-1" />
+                Nuevo Miembro
+              </button>
+          </div>
+        )}
       </div>
 
       {teamMembers.length > 0 ? (
@@ -66,33 +78,45 @@ const TeamList: React.FC<TeamListProps> = ({ teamMembers, onCreateTeamMember, on
               <li key={member.id}>
                 <div className="px-4 py-4 sm:px-6 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <div className="min-w-0 flex-1">
-                    <p className="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate">
-                      {member.name}
-                      {member.alias && <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({member.alias})</span>}
+                    <div className="flex items-center flex-wrap gap-x-2">
+                        <p className="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate">
+                        {member.name}
+                        </p>
+                        {member.roles.map(role => (
+                            <span key={role} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleClasses[role]}`}>
+                                {role}
+                            </span>
+                        ))}
+                    </div>
+                    
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={member.role}>
+                        {member.role}
+                        {member.alias && <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({member.alias})</span>}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={member.role}>{member.role}</p>
                      {member.email && (
                         <div className="mt-1">
                             <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={member.email}>{member.email}</p>
                         </div>
                     )}
                   </div>
-                  <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
-                    <button
-                      onClick={() => onEditTeamMember(member)}
-                      className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
-                      title="Editar Miembro"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteTeamMember(member)}
-                      className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
-                      title="Eliminar Miembro"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </div>
+                  {canManageTeam && (
+                    <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
+                      <button
+                        onClick={() => onEditTeamMember(member)}
+                        className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
+                        title="Editar Miembro"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => onDeleteTeamMember(member)}
+                        className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                        title="Eliminar Miembro"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </li>
             ))}

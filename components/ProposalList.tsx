@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Proposal, ProposalStatus, Client, TeamMember } from '../types';
+import { Proposal, ProposalStatus, Client, TeamMember, User, Role } from '../types';
 import { PlusIcon, FileTextIcon, ArchiveBoxIcon, ClockIcon, UserIcon, MagnifyingGlassIcon, FireIcon } from './Icon';
 
 interface ProposalListProps {
   proposals: Proposal[];
   clients: Client[];
   teamMembers: TeamMember[];
+  currentUser: User | null;
   onSelectProposal: (proposal: Proposal) => void;
   onCreateProposal: () => void;
   showArchived: boolean;
@@ -66,9 +67,12 @@ const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: Tea
   );
 };
 
-const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMembers, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
+const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMembers, currentUser, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  
+  const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
+  const canCreateProposals = hasRole('Admin') || hasRole('ProjectManager');
 
   const clientsMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
   const teamMembersMap = useMemo(() => new Map(teamMembers.map(tm => [tm.id, tm])), [teamMembers]);
@@ -84,7 +88,7 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMem
   }, [searchQuery]);
 
   const filteredProposals = useMemo(() => {
-    if (!showArchived || !debouncedQuery) {
+    if (!debouncedQuery) {
       return proposals;
     }
     
@@ -96,13 +100,13 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMem
       const clientMatch = client?.companyName.toLowerCase().includes(lowercasedQuery);
       return titleMatch || clientMatch;
     });
-  }, [proposals, debouncedQuery, showArchived, clientsMap]);
+  }, [proposals, debouncedQuery, clientsMap]);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-          {showArchived ? 'Propuestas Archivadas' : 'Propuestas Activas'}
+          {showArchived ? 'Propuestas Archivadas' : 'Propuestas'}
         </h2>
         <div className="flex items-center space-x-4">
             <button
@@ -112,7 +116,7 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMem
               <ArchiveBoxIcon className="w-5 h-5 mr-2 -ml-1" />
               {showArchived ? 'Ver Activas' : 'Ver Archivadas'}
             </button>
-            {!showArchived && (
+            {!showArchived && canCreateProposals && (
               <button
                 onClick={onCreateProposal}
                 className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
@@ -124,7 +128,7 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMem
         </div>
       </div>
       
-      {showArchived && (
+      {(showArchived || !canCreateProposals) && (
         <div className="mb-6 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
@@ -156,17 +160,15 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMem
             {debouncedQuery ? (
                 <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             ) : (
-                <ArchiveBoxIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                <FileTextIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             )}
             <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-gray-100">
-                {debouncedQuery ? 'No se encontraron resultados' : (showArchived ? 'No hay propuestas archivadas' : 'No hay propuestas activas')}
+                {debouncedQuery ? 'No se encontraron resultados' : 'No hay propuestas que coincidan'}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {debouncedQuery
                 ? 'Intenta con un término de búsqueda diferente.'
-                : (showArchived
-                ? 'Cuando archives una propuesta, aparecerá aquí.'
-                : '¡Crea tu primera propuesta para empezar!')}
+                : 'No tienes propuestas que cumplan con los filtros actuales.'}
             </p>
         </div>
       )}

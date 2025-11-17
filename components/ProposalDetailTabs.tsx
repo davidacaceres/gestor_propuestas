@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Proposal, Document, ProposalStatus, Client, TeamMember, ProposalHistoryEntryType, Comment } from '../types';
+import { Proposal, Document, TeamMember, ProposalHistoryEntryType, Comment, User, Role } from '../types';
 import { PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, DownloadIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon, ChatBubbleLeftRightIcon } from './Icon';
 
 interface ProposalDetailTabsProps {
   proposal: Proposal;
+  currentUser: User | null;
   teamMembers: TeamMember[];
   onUploadNew: () => void;
   onUploadVersion: (documentId: string, documentName: string) => void;
@@ -11,7 +12,7 @@ interface ProposalDetailTabsProps {
   onAssignMember: (proposalId: string, memberId: string, hours: number) => void;
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
-  onAddComment: (proposalId: string, authorId: string, text: string) => void;
+  onAddComment: (proposalId: string, text: string) => void;
 }
 
 type Tab = 'documents' | 'team' | 'comments' | 'history';
@@ -24,10 +25,46 @@ const historyTypeMap: Record<ProposalHistoryEntryType, { icon: React.FC<{classNa
   general: { icon: PencilIcon, color: 'text-amber-500' },
 };
 
-const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamMembers, onUploadNew, onUploadVersion, onViewHistory, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment }) => {
+const tabs: { id: Tab; name: string; icon: React.FC<{className?: string}> }[] = [
+    { id: 'documents', name: 'Documentos', icon: DocumentIcon },
+    { id: 'team', name: 'Equipo', icon: UserGroupIcon },
+    { id: 'comments', name: 'Comentarios', icon: ChatBubbleLeftRightIcon },
+    { id: 'history', name: 'Historial', icon: HistoryIcon },
+];
+
+// FIX: Refactored TabButton to use a separate props interface, resolving a TypeScript error with the 'key' prop.
+interface TabButtonProps {
+    tab: { id: Tab; name: string; icon: React.FC<{className?: string}> };
+    currentTab: Tab;
+    onClick: (tab: Tab) => void;
+}
+
+const TabButton = ({ tab, currentTab, onClick }: TabButtonProps) => {
+    const isActive = tab.id === currentTab;
+    const Icon = tab.icon;
+    return (
+        <button
+            onClick={() => onClick(tab.id)}
+            className={`flex items-center px-4 py-3 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                isActive
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600'
+            }`}
+        >
+            <Icon className="w-5 h-5 mr-2" />
+            {tab.name}
+        </button>
+    );
+};
+
+const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, currentUser, teamMembers, onUploadNew, onUploadVersion, onViewHistory, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment }) => {
     const [activeTab, setActiveTab] = useState<Tab>('documents');
+    
+    const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
+    const canManageTeam = hasRole('Admin') || hasRole('ProjectManager');
+    
     const isArchived = proposal.status === 'Archivado';
-    const teamMembersMap = new Map(teamMembers.map(tm => [tm.id, tm]));
+    const teamMembersMap: Map<string, TeamMember> = new Map(teamMembers.map(tm => [tm.id, tm]));
     const totalAssignedHours = proposal.assignedTeam.reduce((sum, member) => sum + member.assignedHours, 0);
 
     const availableMembersToAssign = teamMembers.filter(
@@ -35,21 +72,21 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
     );
 
     const [selectedMemberId, setSelectedMemberId] = useState('');
-    const [assignedHours, setAssignedHours] = useState('');
+    // FIX: Shadowing bug where 'assignedHours' from a map function conflicted with a state variable of the same name.
+    const [hoursToAssign, setHoursToAssign] = useState('');
     
     const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
     const [currentHours, setCurrentHours] = useState('');
-
-    const [commentAuthorId, setCommentAuthorId] = useState('');
+    
     const [commentText, setCommentText] = useState('');
 
     const handleAssignSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const hours = parseInt(assignedHours, 10);
+        const hours = parseInt(hoursToAssign, 10);
         if (selectedMemberId && !isNaN(hours) && hours > 0) {
         onAssignMember(proposal.id, selectedMemberId, hours);
         setSelectedMemberId('');
-        setAssignedHours('');
+        setHoursToAssign('');
         }
     };
     
@@ -72,10 +109,9 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
 
     const handleCommentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (commentAuthorId && commentText.trim()) {
-        onAddComment(proposal.id, commentAuthorId, commentText.trim());
-        setCommentAuthorId('');
-        setCommentText('');
+        if (commentText.trim()) {
+            onAddComment(proposal.id, commentText.trim());
+            setCommentText('');
         }
     };
 
@@ -91,31 +127,6 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    };
-
-    const tabs: { id: Tab; name: string; icon: React.FC<{className?: string}> }[] = [
-        { id: 'documents', name: 'Documentos', icon: DocumentIcon },
-        { id: 'team', name: 'Equipo', icon: UserGroupIcon },
-        { id: 'comments', name: 'Comentarios', icon: ChatBubbleLeftRightIcon },
-        { id: 'history', name: 'Historial', icon: HistoryIcon },
-    ];
-
-    const TabButton = ({ tab, currentTab, onClick }: { tab: { id: Tab, name: string, icon: React.FC<{className?: string}> }, currentTab: Tab, onClick: (tab: Tab) => void }) => {
-        const isActive = tab.id === currentTab;
-        const Icon = tab.icon;
-        return (
-            <button
-                onClick={() => onClick(tab.id)}
-                className={`flex items-center px-4 py-3 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
-                    isActive
-                        ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:border-gray-600'
-                }`}
-            >
-                <Icon className="w-5 h-5 mr-2" />
-                {tab.name}
-            </button>
-        );
     };
 
     return (
@@ -226,7 +237,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
                                             <p className="text-sm text-gray-500 dark:text-gray-400">{member.role}</p>
                                         </div>
                                         <div className="flex items-center space-x-4">
-                                        {isEditing ? (
+                                        {isEditing && canManageTeam ? (
                                                 <div className="flex items-center space-x-2">
                                                     <input
                                                         type="number"
@@ -242,7 +253,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
                                             ) : (
                                                 <>
                                                     <p className="text-sm text-gray-700 dark:text-gray-300">{assignedHours} horas</p>
-                                                    {!isArchived && (
+                                                    {!isArchived && canManageTeam && (
                                                         <div className="flex items-center space-x-4">
                                                             <button onClick={() => handleEditHours(memberId, assignedHours)} className="text-gray-500 hover:text-primary-700 dark:hover:text-primary-400" title={`Editar horas de ${member.name}`}>
                                                                 <PencilIcon className="w-5 h-5" />
@@ -263,7 +274,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
                                 <p className="text-center py-4 text-gray-500 dark:text-gray-400">No hay miembros asignados a esta propuesta.</p>
                             )}
 
-                            {!isArchived && availableMembersToAssign.length > 0 && (
+                            {!isArchived && canManageTeam && availableMembersToAssign.length > 0 && (
                                 <form onSubmit={handleAssignSubmit} className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 sm:flex items-end gap-4 space-y-4 sm:space-y-0">
                                     <div className="flex-grow">
                                         <label htmlFor="team-member" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Asignar nuevo miembro</label>
@@ -285,8 +296,8 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
                                         <input
                                             type="number"
                                             id="hours"
-                                            value={assignedHours}
-                                            onChange={e => setAssignedHours(e.target.value)}
+                                            value={hoursToAssign}
+                                            onChange={e => setHoursToAssign(e.target.value)}
                                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                                             placeholder="Ej: 40"
                                             min="1"
@@ -311,34 +322,17 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
                         
                         {!isArchived && (
                             <form onSubmit={handleCommentSubmit} className="mb-8">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="sm:col-span-1">
-                                        <label htmlFor="comment-author" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Autor</label>
-                                        <select
-                                            id="comment-author"
-                                            value={commentAuthorId}
-                                            onChange={e => setCommentAuthorId(e.target.value)}
-                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                            required
-                                        >
-                                            <option value="" disabled>Selecciona tu nombre</option>
-                                            {teamMembers.map(tm => (
-                                                <option key={tm.id} value={tm.id}>{tm.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <label htmlFor="comment-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Comentario</label>
-                                        <textarea
-                                            id="comment-text"
-                                            rows={3}
-                                            value={commentText}
-                                            onChange={e => setCommentText(e.target.value)}
-                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                            placeholder="Escribe tu comentario aquí..."
-                                            required
-                                        />
-                                    </div>
+                                <div>
+                                    <label htmlFor="comment-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Añadir un comentario</label>
+                                    <textarea
+                                        id="comment-text"
+                                        rows={3}
+                                        value={commentText}
+                                        onChange={e => setCommentText(e.target.value)}
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                        placeholder="Escribe tu comentario aquí..."
+                                        required
+                                    />
                                 </div>
                                 <div className="mt-3 flex justify-end">
                                     <button type="submit" className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
@@ -382,6 +376,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
                             <ul role="list" className="-mb-8">
                                 {proposal.history?.map((entry, entryIdx) => {
                                     const { icon: IconComponent, color } = historyTypeMap[entry.type];
+                                    const author = teamMembersMap.get(entry.authorId);
                                     return (
                                     <li key={entry.id}>
                                         <div className="relative pb-8">
@@ -396,7 +391,10 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, teamM
                                             </div>
                                             <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
                                             <div>
-                                                <p className="text-sm text-gray-700 dark:text-gray-300">{entry.description}</p>
+                                                <p className="text-sm text-gray-700 dark:text-gray-300">
+                                                    {entry.description}
+                                                    {author && <span className="font-medium text-gray-900 dark:text-gray-100"> por {author.name}</span>}
+                                                </p>
                                             </div>
                                             <div className="whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400">
                                                 <time dateTime={entry.timestamp.toISOString()}>{entry.timestamp.toLocaleString('es-ES')}</time>

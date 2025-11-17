@@ -6,7 +6,7 @@ Una aplicación web completa y robusta diseñada para centralizar y optimizar el
 
 -   **Gestión Integral de Propuestas**: Crea, edita, y gestiona el estado de tus propuestas.
 -   **Cartera de Clientes Centralizada**: Administra la información de tus clientes y visualiza su historial de propuestas.
--   **Módulo de Equipo**: Gestiona de forma centralizada a los miembros de tu equipo y sus roles.
+-   **Módulo de Equipo con Control de Roles**: Gestiona a los miembros de tu equipo y asigna permisos detallados.
 -   **Versionamiento de Documentos**: Sube documentos y mantén un historial completo de cada versión.
 -   **Colaboración en Equipo**: Asigna líderes, miembros de equipo, y deja comentarios.
 -   **Seguimiento y Notificaciones**: Mantente al día con un centro de notificaciones y un historial de actividad detallado.
@@ -75,6 +75,52 @@ Una aplicación web completa y robusta diseñada para centralizar y optimizar el
     -   Diseño organizado con pestañas en la vista de detalle para no sobrecargar de información (`Documentos`, `Equipo`, `Comentarios`, `Historial`).
     -   **Modo Oscuro** automático que se adapta a las preferencias del sistema operativo.
     -   Componentes reutilizables y una base de código modular para fácil mantenimiento.
+
+---
+
+## Roles y Permisos
+
+El sistema cuenta con un control de acceso basado en roles para garantizar la seguridad y la correcta delegación de responsabilidades. Un usuario puede tener múltiples roles para combinar sus permisos.
+
+### 1. Administrador (`Admin`)
+
+Es el rol con el nivel más alto de privilegios. Tiene control total sobre la plataforma.
+
+-   **Visibilidad**: Acceso completo a los módulos de **Propuestas, Clientes y Equipo**.
+-   **Permisos de Propuestas**:
+    -   Puede **crear, editar y gestionar** cualquier aspecto de todas las propuestas.
+-   **Permisos de Clientes**:
+    -   Puede **crear, editar y eliminar** cualquier cliente, incluso si tienen propuestas asociadas (con una advertencia de confirmación).
+-   **Permisos de Equipo**:
+    -   Puede **crear, editar y eliminar** a cualquier miembro del equipo.
+    -   **Función clave**: Es el único rol que puede **asignar o modificar los roles** de otros usuarios.
+    -   Puede importar miembros desde un archivo CSV.
+
+### 2. Gestor de Proyectos (`ProjectManager`)
+
+Rol diseñado para líderes de proyecto que necesitan gestionar el ciclo de vida de las propuestas y la cartera de clientes, pero no la configuración del sistema.
+
+-   **Visibilidad**: Acceso a los módulos de **Propuestas y Clientes**. No puede ver el módulo de Equipo.
+-   **Permisos de Propuestas**:
+    -   Puede **crear, editar y gestionar** cualquier aspecto de todas las propuestas (cambiar estado, asignar equipo, etc.).
+-   **Permisos de Clientes**:
+    -   Puede **crear, editar y eliminar** clientes, con la restricción de no poder borrar aquellos que estén en uso.
+-   **Permisos de Equipo**:
+    -   No tiene acceso a la gestión de miembros del equipo ni a la asignación de roles.
+
+### 3. Miembro de Equipo (`TeamMember`)
+
+Es el rol base para los colaboradores que trabajan en las propuestas pero no las administran.
+
+-   **Visibilidad**: Acceso restringido únicamente al módulo de **Propuestas**. No puede ver los módulos de Clientes ni Equipo.
+-   **Permisos de Propuestas**:
+    -   Solo puede ver las propuestas a las que ha sido **asignado** (como líder o miembro).
+    -   Dentro de sus propuestas, puede **añadir comentarios** y **subir documentos** (o nuevas versiones).
+    -   **No puede** crear nuevas propuestas, cambiar su estado, editar sus detalles principales, ni gestionar el equipo asignado.
+
+La interfaz de la aplicación se adapta dinámicamente: los botones, menús y pestañas de navegación se muestran u ocultan según los roles del usuario que ha iniciado sesión.
+
+---
 
 ## Stack Tecnológico
 

@@ -1,28 +1,33 @@
-
 import React from 'react';
-import { Client } from '../types';
+import { Client, User, Role } from '../types';
 import { PlusIcon, UserGroupIcon, ChevronRightIcon, PencilIcon, TrashIcon } from './Icon';
 
 interface ClientListProps {
   clients: Client[];
+  currentUser: User | null;
   onCreateClient: () => void;
   onSelectClient: (client: Client) => void;
   onEditClient: (client: Client) => void;
   onDeleteClient: (client: Client) => void;
 }
 
-const ClientList: React.FC<ClientListProps> = ({ clients, onCreateClient, onSelectClient, onEditClient, onDeleteClient }) => {
+const ClientList: React.FC<ClientListProps> = ({ clients, currentUser, onCreateClient, onSelectClient, onEditClient, onDeleteClient }) => {
+  const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
+  const canManageClients = hasRole('Admin') || hasRole('ProjectManager');
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Clientes</h2>
-        <button
-          onClick={onCreateClient}
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-        >
-          <PlusIcon className="w-5 h-5 mr-2 -ml-1" />
-          Nuevo Cliente
-        </button>
+        {canManageClients && (
+          <button
+            onClick={onCreateClient}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+          >
+            <PlusIcon className="w-5 h-5 mr-2 -ml-1" />
+            Nuevo Cliente
+          </button>
+        )}
       </div>
 
       {clients.length > 0 ? (
@@ -48,28 +53,30 @@ const ClientList: React.FC<ClientListProps> = ({ clients, onCreateClient, onSele
                       </div>
                     </div>
                   </div>
-                  <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditClient(client);
-                      }}
-                      className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
-                      title="Editar Cliente"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteClient(client);
-                      }}
-                      className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
-                      title="Eliminar Cliente"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </div>
+                  {canManageClients && (
+                    <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditClient(client);
+                        }}
+                        className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
+                        title="Editar Cliente"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteClient(client);
+                        }}
+                        className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                        title="Eliminar Cliente"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </li>
             ))}
