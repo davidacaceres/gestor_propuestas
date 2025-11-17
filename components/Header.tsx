@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileTextIcon, UserGroupIcon, BellIcon, UsersIcon, UserIcon } from './Icon';
-import { Notification, User, Role } from '../types';
+import { FileTextIcon, UserGroupIcon, BellIcon, UsersIcon, UserIcon, HomeIcon } from './Icon';
+import { Notification, User, Role, View } from '../types';
 import NotificationsPanel from './NotificationsPanel';
-
-type View = 'proposals' | 'clients' | 'team';
 
 interface HeaderProps {
   currentUser: User;
@@ -54,6 +52,13 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, currentView, onN
               Gestor de Propuestas
             </h1>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <button
+                onClick={() => onNavigate('dashboard')}
+                className={`${navItemClasses} ${currentView === 'dashboard' ? activeClasses : inactiveClasses}`}
+              >
+                <HomeIcon className="-ml-0.5 mr-2 h-5 w-5" />
+                Dashboard
+              </button>
               <button
                 onClick={() => onNavigate('proposals')}
                 className={`${navItemClasses} ${currentView === 'proposals' ? activeClasses : inactiveClasses}`}

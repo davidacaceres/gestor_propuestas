@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Proposal, Document, TeamMember, ProposalHistoryEntryType, Comment, User, Role } from '../types';
 import { PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, DownloadIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon, ChatBubbleLeftRightIcon } from './Icon';
+import Pagination from './Pagination';
+import { usePagination } from '../hooks/usePagination';
 
 interface ProposalDetailTabsProps {
   proposal: Proposal;
@@ -32,7 +34,6 @@ const tabs: { id: Tab; name: string; icon: React.FC<{className?: string}> }[] = 
     { id: 'history', name: 'Historial', icon: HistoryIcon },
 ];
 
-// FIX: Refactored TabButton to use a separate props interface, resolving a TypeScript error with the 'key' prop.
 interface TabButtonProps {
     tab: { id: Tab; name: string; icon: React.FC<{className?: string}> };
     currentTab: Tab;
@@ -65,14 +66,18 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
     
     const isArchived = proposal.status === 'Archivado';
     const teamMembersMap: Map<string, TeamMember> = new Map(teamMembers.map(tm => [tm.id, tm]));
-    const totalAssignedHours = proposal.assignedTeam.reduce((sum, member) => sum + member.assignedHours, 0);
+    
+    // Pagination for each tab
+    const docsPagination = usePagination(proposal.documents, 5);
+    const teamPagination = usePagination(proposal.assignedTeam, 5);
+    const commentsPagination = usePagination(proposal.comments || [], 5);
+    const historyPagination = usePagination(proposal.history || [], 10);
 
     const availableMembersToAssign = teamMembers.filter(
         tm => !proposal.assignedTeam.some(am => am.memberId === tm.id)
     );
 
     const [selectedMemberId, setSelectedMemberId] = useState('');
-    // FIX: Shadowing bug where 'assignedHours' from a map function conflicted with a state variable of the same name.
     const [hoursToAssign, setHoursToAssign] = useState('');
     
     const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
@@ -162,7 +167,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                            {proposal.documents.map((doc) => (
+                                            {docsPagination.paginatedItems.map((doc) => (
                                                 <tr key={doc.id}>
                                                     <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-gray-100 sm:pl-0 flex items-center">
                                                         <DocumentIcon className="w-5 h-5 mr-3 text-gray-400 dark:text-gray-500"/>
@@ -203,7 +208,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {proposal.documents.length === 0 && (
+                                            {docsPagination.paginatedItems.length === 0 && (
                                                 <tr>
                                                     <td colSpan={4} className="text-center py-10 text-gray-500 dark:text-gray-400">
                                                         No hay documentos para esta propuesta.
@@ -215,6 +220,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                 </div>
                             </div>
                         </div>
+                        {docsPagination.totalPages > 1 && <Pagination {...docsPagination} />}
                     </div>
                 )}
 
@@ -223,11 +229,11 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Equipo Asignado</h3>
                             <span className="text-sm font-semibold text-gray-700 bg-gray-100 dark:bg-gray-700 dark:text-gray-200 px-3 py-1 rounded-full">
-                                Total Horas: {totalAssignedHours}
+                                Total Horas: {proposal.assignedTeam.reduce((sum, member) => sum + member.assignedHours, 0)}
                             </span>
                         </div>
                         <div className="space-y-4">
-                            {proposal.assignedTeam.map(({ memberId, assignedHours }) => {
+                            {teamPagination.paginatedItems.map(({ memberId, assignedHours }) => {
                                 const member = teamMembersMap.get(memberId);
                                 const isEditing = editingMemberId === memberId;
                                 return member ? (
@@ -270,9 +276,11 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                 ) : null;
                             })}
 
-                            {proposal.assignedTeam.length === 0 && (
+                            {teamPagination.paginatedItems.length === 0 && (
                                 <p className="text-center py-4 text-gray-500 dark:text-gray-400">No hay miembros asignados a esta propuesta.</p>
                             )}
+                            
+                            {teamPagination.totalPages > 1 && <Pagination {...teamPagination} />}
 
                             {!isArchived && canManageTeam && availableMembersToAssign.length > 0 && (
                                 <form onSubmit={handleAssignSubmit} className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 sm:flex items-end gap-4 space-y-4 sm:space-y-0">
@@ -343,7 +351,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                         )}
 
                         <div className="space-y-6">
-                            {(proposal.comments || []).map(comment => {
+                            {commentsPagination.paginatedItems.map(comment => {
                                 const author = teamMembersMap.get(comment.authorId);
                                 return (
                                     <div key={comment.id} className="flex items-start space-x-4">
@@ -353,7 +361,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                         <div className="flex-1">
                                             <div className="flex items-baseline justify-between">
                                                 <p className="font-semibold text-gray-900 dark:text-gray-100">{author?.name || 'Usuario Desconocido'}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{comment.createdAt.toLocaleString('es-ES')}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(comment.createdAt).toLocaleString('es-ES')}</p>
                                             </div>
                                             <div className="mt-2 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                                                 <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{comment.text}</p>
@@ -362,10 +370,11 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                     </div>
                                 );
                             })}
-                            {(!proposal.comments || proposal.comments.length === 0) && (
+                            {commentsPagination.paginatedItems.length === 0 && (
                                 <p className="text-center py-6 text-gray-500 dark:text-gray-400">No hay comentarios todavía.</p>
                             )}
                         </div>
+                        {commentsPagination.totalPages > 1 && <Pagination {...commentsPagination} />}
                     </div>
                 )}
 
@@ -374,13 +383,13 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                         <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-6">Historial de Actividad</h3>
                         <div className="flow-root">
                             <ul role="list" className="-mb-8">
-                                {proposal.history?.map((entry, entryIdx) => {
+                                {historyPagination.paginatedItems.map((entry, entryIdx) => {
                                     const { icon: IconComponent, color } = historyTypeMap[entry.type];
                                     const author = teamMembersMap.get(entry.authorId);
                                     return (
                                     <li key={entry.id}>
                                         <div className="relative pb-8">
-                                        {entryIdx !== proposal.history.length - 1 ? (
+                                        {entryIdx !== historyPagination.paginatedItems.length - 1 ? (
                                             <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
                                         ) : null}
                                         <div className="relative flex space-x-4">
@@ -405,11 +414,12 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                     </li>
                                     )
                                 })}
-                                {(!proposal.history || proposal.history.length === 0) && (
+                                {historyPagination.paginatedItems.length === 0 && (
                                     <p className="text-center py-4 text-gray-500 dark:text-gray-400">No hay actividad registrada.</p>
                                 )}
                             </ul>
                         </div>
+                        {historyPagination.totalPages > 1 && <Pagination {...historyPagination} />}
                     </div>
                 )}
             </div>

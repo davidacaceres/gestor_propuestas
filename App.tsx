@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry, Comment, User, Role } from './types';
+import { Proposal, Document, DocumentVersion, ProposalStatus, ModalState, Client, TeamMember, AssignedMember, Notification, ProposalHistoryEntry, Comment, User, Role, View } from './types';
 import Header from './components/Header';
 import ProposalList from './components/ProposalList';
 import ProposalDetail from './components/ProposalDetail';
 import ClientList from './components/ClientList';
 import ClientDetail from './components/ClientDetail';
 import TeamList from './components/TeamList';
+import Dashboard from './components/Dashboard';
 import Modal from './components/Modal';
 import CreateProposalForm from './components/CreateProposalForm';
 import CreateClientForm from './components/CreateClientForm';
@@ -16,6 +17,7 @@ import ConfirmationDialog from './components/ConfirmationDialog';
 import EditClientForm from './components/EditClientForm';
 import EditTeamMemberForm from './components/EditTeamMemberForm';
 import LoginScreen from './components/LoginScreen';
+import DocumentVersionsModal from './components/DocumentVersionsModal';
 
 const initialClients: Client[] = [
   { id: 'client-1', companyName: 'Innovatech Solutions', contactName: 'Ana Pérez', contactEmail: 'ana.perez@innovatech.com', contactPhone: '555-0101' },
@@ -31,95 +33,39 @@ const initialTeamMembers: TeamMember[] = [
 ];
 
 const initialProposals: Proposal[] = [
-  {
-    id: 'prop-1',
-    title: 'Rediseño del Sitio Web Corporativo',
-    clientId: 'client-1',
-    leaderId: 'team-3',
-    description: 'Propuesta completa para el rediseño del sitio web corporativo de Innovatech Solutions, incluyendo UX/UI y desarrollo frontend.',
-    deadline: new Date(new Date().setDate(new Date().getDate() + 5)),
-    alertDate: new Date(new Date().setDate(new Date().getDate() + 2)),
-    status: 'Enviado',
-    createdAt: new Date(2023, 10, 15),
-    documents: [
+  ...Array.from({ length: 15 }, (_, i) => ({
+    id: `prop-${i + 1}`,
+    title: `Propuesta de Expansión ${i + 1}`,
+    clientId: initialClients[i % initialClients.length].id,
+    leaderId: initialTeamMembers[i % initialTeamMembers.length].id,
+    description: `Descripción detallada para la propuesta de expansión #${i + 1}.`,
+    deadline: new Date(new Date().setDate(new Date().getDate() + (i * 2) + 5)),
+    alertDate: new Date(new Date().setDate(new Date().getDate() + i + 2)),
+    status: (['Borrador', 'Enviado', 'Aceptado', 'Rechazado'] as ProposalStatus[])[i % 4],
+    createdAt: new Date(2023, 10, 15 - i),
+    documents: i < 5 ? [
       {
-        id: 'doc-1-1',
-        name: 'Brief del Proyecto',
-        createdAt: new Date(2023, 10, 15),
+        id: `doc-${i + 1}-1`,
+        name: `Contrato Inicial ${i+1}.pdf`,
+        createdAt: new Date(new Date().setDate(new Date().getDate() - 10 + i)),
         versions: [
-          { versionNumber: 2, fileName: 'Brief_v2.pdf', fileContent: '', createdAt: new Date(2023, 10, 18), notes: 'Actualizado con feedback del cliente.' },
-          { versionNumber: 1, fileName: 'Brief_v1.pdf', fileContent: '', createdAt: new Date(2023, 10, 15), notes: 'Versión inicial.' },
-        ],
-      },
-      {
-        id: 'doc-1-2',
-        name: 'Cotización Económica',
-        createdAt: new Date(2023, 10, 16),
-        versions: [
-          { versionNumber: 1, fileName: 'Cotizacion.xlsx', fileContent: '', createdAt: new Date(2023, 10, 16), notes: 'Cotización inicial.' },
-        ],
-      },
-    ],
-    assignedTeam: [
-      { memberId: 'team-1', assignedHours: 40 },
-      { memberId: 'team-2', assignedHours: 80 },
-    ],
-    history: [
-        { id: 'hist-1-1', authorId: 'team-2', type: 'status', description: 'Estado cambiado de "Borrador" a "Enviado".', timestamp: new Date(2023, 10, 17) },
-        { id: 'hist-1-2', authorId: 'team-3', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 10, 15) },
-    ],
-    comments: [
-      { id: 'comment-1-1', authorId: 'team-3', text: 'Recordar revisar la cotización antes de enviarla al cliente.', createdAt: new Date(2023, 10, 16) }
-    ],
-  },
-  {
-    id: 'prop-2',
-    title: 'Campaña de Marketing Digital Q1 2024',
-    clientId: 'client-2',
-    leaderId: 'team-4',
-    description: 'Estrategia y ejecución de campaña de marketing digital para el primer trimestre de 2024.',
-    deadline: new Date(2023, 11, 20),
-    alertDate: new Date(2023, 11, 15),
-    status: 'Aceptado',
-    createdAt: new Date(2023, 11, 5),
-    documents: [],
-    assignedTeam: [
-      { memberId: 'team-4', assignedHours: 60 },
-    ],
-    history: [
-       { id: 'hist-2-1', authorId: 'team-4', type: 'creation', description: 'Propuesta creada.', timestamp: new Date(2023, 11, 5) },
-    ],
-    comments: [],
-  },
-  {
-    id: 'prop-3',
-    title: 'Desarrollo de App Móvil',
-    clientId: 'client-3',
-    leaderId: 'team-3',
-    description: 'Desarrollo de una aplicación móvil nativa para iOS y Android para Stellar Goods.',
-    deadline: new Date(new Date().setDate(new Date().getDate() + 15)),
-    alertDate: new Date(new Date().setDate(new Date().getDate() + 10)),
-    status: 'Borrador',
-    createdAt: new Date(),
-    documents: [
-       {
-        id: 'doc-3-1',
-        name: 'Requerimientos Funcionales',
-        createdAt: new Date(),
-        versions: [
-          { versionNumber: 1, fileName: 'Requerimientos.docx', fileContent: '', createdAt: new Date(), notes: 'Documento inicial de requerimientos.' },
-        ],
-      },
-    ],
+          {
+            versionNumber: 1,
+            fileName: `Contrato_v1_${i+1}.pdf`,
+            fileContent: 'data:application/pdf;base64,',
+            createdAt: new Date(new Date().setDate(new Date().getDate() - 10 + i)),
+            notes: 'Versión inicial'
+          }
+        ]
+      }
+    ] : [],
     assignedTeam: [],
-    history: [
-       { id: 'hist-3-1', authorId: 'team-2', type: 'creation', description: 'Propuesta creada.', timestamp: new Date() },
-    ],
+    history: [],
     comments: [],
-  },
+  })),
 ];
 
-type View = 'proposals' | 'clients' | 'team';
+const ITEMS_PER_PAGE = 6;
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -131,7 +77,27 @@ const App: React.FC = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [modalState, setModalState] = useState<ModalState>({ type: null });
   const [showArchived, setShowArchived] = useState(false);
-  const [currentView, setCurrentView] = useState<View>('proposals');
+  const [currentView, setCurrentView] = useState<View>('dashboard');
+  const [proposalViewMode, setProposalViewMode] = useState<'card' | 'gantt'>('card');
+  
+  // Pagination State
+  const [proposalsCurrentPage, setProposalsCurrentPage] = useState(1);
+  const [clientsCurrentPage, setClientsCurrentPage] = useState(1);
+  const [teamCurrentPage, setTeamCurrentPage] = useState(1);
+  const [clientDetailProposalsPage, setClientDetailProposalsPage] = useState(1);
+
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+      setProposalsCurrentPage(1); // Reset page on new search
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
 
   // Permissions helpers
   const hasRole = useCallback((role: Role) => currentUser?.roles.includes(role) ?? false, [currentUser]);
@@ -141,13 +107,14 @@ const App: React.FC = () => {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    setCurrentView('dashboard');
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setSelectedProposal(null);
     setSelectedClient(null);
-    setCurrentView('proposals');
+    setCurrentView('dashboard');
   };
 
   const addNotification = useCallback((message: string, proposalId: string) => {
@@ -209,6 +176,7 @@ const App: React.FC = () => {
       comments: [],
     };
     setProposals(prev => [newProposal, ...prev]);
+    setProposalsCurrentPage(1);
     setModalState({ type: null });
   };
   
@@ -221,6 +189,7 @@ const App: React.FC = () => {
       contactPhone,
     };
     setClients(prev => [newClient, ...prev]);
+    setClientsCurrentPage(1);
     setModalState({ type: null });
   };
 
@@ -250,6 +219,7 @@ const App: React.FC = () => {
       roles: roles.length > 0 ? roles : ['TeamMember'],
     };
     setTeamMembers(prev => [newMember, ...prev]);
+    setTeamCurrentPage(1);
     setModalState({ type: null });
   };
 
@@ -708,6 +678,7 @@ const App: React.FC = () => {
   
   const handleSelectClient = (client: Client) => {
     setSelectedClient(client);
+    setClientDetailProposalsPage(1);
     setCurrentView('clients');
   };
 
@@ -731,6 +702,7 @@ const App: React.FC = () => {
   
   const handleToggleShowArchived = () => {
     setShowArchived(prev => !prev);
+    setProposalsCurrentPage(1);
   }
 
   const handleNavigate = (view: View) => {
@@ -740,6 +712,10 @@ const App: React.FC = () => {
     setCurrentView(view);
     setSelectedProposal(null);
     setSelectedClient(null);
+  };
+  
+  const handleShowDocumentVersions = (data: { proposalTitle: string; date: Date; versions: DocumentVersion[] }) => {
+    setModalState({ type: 'viewDocumentVersions', data });
   };
 
   const renderModalContent = () => {
@@ -766,6 +742,8 @@ const App: React.FC = () => {
         );
       case 'viewHistory':
         return <DocumentHistory document={modalState.data.document} onCancel={() => setModalState({ type: null })} />;
+      case 'viewDocumentVersions':
+        return <DocumentVersionsModal data={modalState.data} onCancel={() => setModalState({ type: null })} />;
       case 'confirmAction':
         return (
           <ConfirmationDialog
@@ -783,22 +761,35 @@ const App: React.FC = () => {
         return null;
     }
   };
-
+  
+  // Memoized lists for rendering
   const visibleProposals = useMemo(() => {
-    const filteredByArchive = proposals.filter(p => 
+    const baseProposals = proposals.filter(p => 
         showArchived ? p.status === 'Archivado' : p.status !== 'Archivado'
     );
+    
+    const userFilteredProposals = (canViewAllProposals || !currentUser)
+        ? baseProposals
+        : baseProposals.filter(p => 
+            p.leaderId === currentUser.id || 
+            p.assignedTeam.some(m => m.memberId === currentUser.id)
+        );
 
-    if (canViewAllProposals || !currentUser) {
-        return filteredByArchive;
+    if (!debouncedQuery) {
+        return userFilteredProposals;
     }
 
-    return filteredByArchive.filter(p => 
-        p.leaderId === currentUser.id || 
-        p.assignedTeam.some(m => m.memberId === currentUser.id)
-    );
-  }, [proposals, showArchived, currentUser, canViewAllProposals]);
+    const lowercasedQuery = debouncedQuery.toLowerCase();
+    const clientsMap = new Map(clients.map(c => [c.id, c]));
+    
+    return userFilteredProposals.filter(proposal => {
+      const client = clientsMap.get(proposal.clientId);
+      const titleMatch = proposal.title.toLowerCase().includes(lowercasedQuery);
+      const clientMatch = client?.companyName.toLowerCase().includes(lowercasedQuery);
+      return titleMatch || clientMatch;
+    });
 
+  }, [proposals, showArchived, currentUser, canViewAllProposals, debouncedQuery, clients]);
 
   const renderCurrentView = () => {
     // A selected proposal always has rendering priority
@@ -823,12 +814,35 @@ const App: React.FC = () => {
           />
       );
     }
+    
+    // Pagination Calculations
+    const proposalsTotalPages = Math.ceil(visibleProposals.length / ITEMS_PER_PAGE);
+    const paginatedProposals = visibleProposals.slice((proposalsCurrentPage - 1) * ITEMS_PER_PAGE, proposalsCurrentPage * ITEMS_PER_PAGE);
+
+    const clientsTotalPages = Math.ceil(clients.length / ITEMS_PER_PAGE);
+    const paginatedClients = clients.slice((clientsCurrentPage - 1) * ITEMS_PER_PAGE, clientsCurrentPage * ITEMS_PER_PAGE);
+
+    const teamTotalPages = Math.ceil(teamMembers.length / ITEMS_PER_PAGE);
+    const paginatedTeamMembers = teamMembers.slice((teamCurrentPage - 1) * ITEMS_PER_PAGE, teamCurrentPage * ITEMS_PER_PAGE);
+
 
     switch (currentView) {
+      case 'dashboard':
+        return (
+          <Dashboard
+            currentUser={currentUser}
+            proposals={visibleProposals}
+            clients={clients}
+            teamMembers={teamMembers}
+            onSelectProposal={handleSelectProposal}
+            onNavigate={handleNavigate}
+          />
+        );
       case 'proposals':
         return (
           <ProposalList
-            proposals={visibleProposals}
+            proposals={paginatedProposals}
+            totalProposals={visibleProposals.length}
             clients={clients}
             teamMembers={teamMembers}
             currentUser={currentUser}
@@ -836,23 +850,37 @@ const App: React.FC = () => {
             onCreateProposal={() => setModalState({ type: 'createProposal' })}
             showArchived={showArchived}
             onToggleShowArchived={handleToggleShowArchived}
+            proposalViewMode={proposalViewMode}
+            onSetProposalViewMode={setProposalViewMode}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            currentPage={proposalsCurrentPage}
+            totalPages={proposalsTotalPages}
+            onPageChange={setProposalsCurrentPage}
+            onShowDocumentVersions={handleShowDocumentVersions}
           />
         );
       case 'clients':
         if (selectedClient) {
           const clientProposals = proposals.filter(p => p.clientId === selectedClient.id);
+          const clientProposalsTotalPages = Math.ceil(clientProposals.length / ITEMS_PER_PAGE);
+          const paginatedClientProposals = clientProposals.slice((clientDetailProposalsPage - 1) * ITEMS_PER_PAGE, clientDetailProposalsPage * ITEMS_PER_PAGE);
+          
           return (
             <ClientDetail 
               client={selectedClient}
-              proposals={clientProposals}
+              proposals={paginatedClientProposals}
               onBack={handleBackToClientList}
               onSelectProposal={handleSelectProposalFromClient}
+              currentPage={clientDetailProposalsPage}
+              totalPages={clientProposalsTotalPages}
+              onPageChange={setClientDetailProposalsPage}
             />
           );
         }
         return (
           <ClientList 
-            clients={clients}
+            clients={paginatedClients}
             currentUser={currentUser}
             onSelectClient={handleSelectClient}
             onCreateClient={() => setModalState({ type: 'createClient' })} 
@@ -863,12 +891,15 @@ const App: React.FC = () => {
               confirmText: 'Eliminar',
               onConfirm: () => handleDeleteClient(client.id)
             }})}
+            currentPage={clientsCurrentPage}
+            totalPages={clientsTotalPages}
+            onPageChange={setClientsCurrentPage}
           />
         );
       case 'team':
         return (
           <TeamList
-            teamMembers={teamMembers}
+            teamMembers={paginatedTeamMembers}
             currentUser={currentUser}
             onCreateTeamMember={() => setModalState({ type: 'createTeamMember' })}
             onImportTeamMembers={handleImportTeamMembers}
@@ -879,6 +910,9 @@ const App: React.FC = () => {
               confirmText: 'Eliminar',
               onConfirm: () => handleDeleteTeamMember(member.id)
             }})}
+            currentPage={teamCurrentPage}
+            totalPages={teamTotalPages}
+            onPageChange={setTeamCurrentPage}
           />
         );
       default:

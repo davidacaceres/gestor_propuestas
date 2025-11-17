@@ -1,15 +1,7 @@
 import React, { useRef } from 'react';
-import { TeamMember, User, Role } from '../types';
+import { TeamMember, TeamListProps, Role } from '../types';
 import { PlusIcon, UsersIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon } from './Icon';
-
-interface TeamListProps {
-  teamMembers: TeamMember[];
-  currentUser: User | null;
-  onCreateTeamMember: () => void;
-  onImportTeamMembers: (fileContent: string) => void;
-  onEditTeamMember: (member: TeamMember) => void;
-  onDeleteTeamMember: (member: TeamMember) => void;
-}
+import Pagination from './Pagination';
 
 const roleClasses: Record<Role, string> = {
   'Admin': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
@@ -17,7 +9,17 @@ const roleClasses: Record<Role, string> = {
   'TeamMember': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
 };
 
-const TeamList: React.FC<TeamListProps> = ({ teamMembers, currentUser, onCreateTeamMember, onImportTeamMembers, onEditTeamMember, onDeleteTeamMember }) => {
+const TeamList: React.FC<TeamListProps> = ({ 
+  teamMembers, 
+  currentUser, 
+  onCreateTeamMember, 
+  onImportTeamMembers, 
+  onEditTeamMember, 
+  onDeleteTeamMember,
+  currentPage,
+  totalPages,
+  onPageChange
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
@@ -72,56 +74,61 @@ const TeamList: React.FC<TeamListProps> = ({ teamMembers, currentUser, onCreateT
       </div>
 
       {teamMembers.length > 0 ? (
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-          <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
-            {teamMembers.map((member) => (
-              <li key={member.id}>
-                <div className="px-4 py-4 sm:px-6 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center flex-wrap gap-x-2">
-                        <p className="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate">
-                        {member.name}
-                        </p>
-                        {member.roles.map(role => (
-                            <span key={role} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleClasses[role]}`}>
-                                {role}
-                            </span>
-                        ))}
+        <>
+          <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
+            <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
+              {teamMembers.map((member) => (
+                <li key={member.id}>
+                  <div className="px-4 py-4 sm:px-6 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center flex-wrap gap-x-2">
+                          <p className="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate">
+                          {member.name}
+                          </p>
+                          {member.roles.map(role => (
+                              <span key={role} className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${roleClasses[role]}`}>
+                                  {role}
+                              </span>
+                          ))}
+                      </div>
+                      
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={member.role}>
+                          {member.role}
+                          {member.alias && <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({member.alias})</span>}
+                      </p>
+                       {member.email && (
+                          <div className="mt-1">
+                              <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={member.email}>{member.email}</p>
+                          </div>
+                      )}
                     </div>
-                    
-                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={member.role}>
-                        {member.role}
-                        {member.alias && <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">({member.alias})</span>}
-                    </p>
-                     {member.email && (
-                        <div className="mt-1">
-                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate" title={member.email}>{member.email}</p>
-                        </div>
+                    {canManageTeam && (
+                      <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
+                        <button
+                          onClick={() => onEditTeamMember(member)}
+                          className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
+                          title="Editar Miembro"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => onDeleteTeamMember(member)}
+                          className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                          title="Eliminar Miembro"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
                     )}
                   </div>
-                  {canManageTeam && (
-                    <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
-                      <button
-                        onClick={() => onEditTeamMember(member)}
-                        className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
-                        title="Editar Miembro"
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteTeamMember(member)}
-                        className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
-                        title="Eliminar Miembro"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {totalPages > 1 && (
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+          )}
+        </>
       ) : (
         <div className="text-center py-16 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
             <UsersIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />

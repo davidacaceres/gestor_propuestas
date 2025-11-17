@@ -1,17 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Proposal, ProposalStatus, Client, TeamMember, User, Role } from '../types';
-import { PlusIcon, FileTextIcon, ArchiveBoxIcon, ClockIcon, UserIcon, MagnifyingGlassIcon, FireIcon } from './Icon';
-
-interface ProposalListProps {
-  proposals: Proposal[];
-  clients: Client[];
-  teamMembers: TeamMember[];
-  currentUser: User | null;
-  onSelectProposal: (proposal: Proposal) => void;
-  onCreateProposal: () => void;
-  showArchived: boolean;
-  onToggleShowArchived: () => void;
-}
+import React, { useMemo } from 'react';
+import { Proposal, ProposalStatus, Client, TeamMember, ProposalListProps } from '../types';
+import { FileTextIcon, ArchiveBoxIcon, ClockIcon, UserIcon, MagnifyingGlassIcon, FireIcon, Squares2X2Icon, ChartBarIcon, PlusIcon } from './Icon';
+import GanttChart from './GanttChart';
+import Pagination from './Pagination';
 
 const statusClasses: Record<ProposalStatus, string> = {
   'Borrador': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
@@ -67,40 +58,31 @@ const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: Tea
   );
 };
 
-const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMembers, currentUser, onSelectProposal, onCreateProposal, showArchived, onToggleShowArchived }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+const ProposalList: React.FC<ProposalListProps> = ({ 
+  proposals, 
+  totalProposals,
+  clients, 
+  teamMembers, 
+  currentUser, 
+  onSelectProposal, 
+  onCreateProposal, 
+  showArchived, 
+  onToggleShowArchived, 
+  proposalViewMode, 
+  onSetProposalViewMode,
+  searchQuery,
+  onSearchChange,
+  currentPage,
+  totalPages,
+  onPageChange,
+  onShowDocumentVersions
+}) => {
   
-  const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
+  const hasRole = (role: 'Admin' | 'ProjectManager' | 'TeamMember') => currentUser?.roles.includes(role) ?? false;
   const canCreateProposals = hasRole('Admin') || hasRole('ProjectManager');
 
   const clientsMap = useMemo(() => new Map(clients.map(c => [c.id, c])), [clients]);
   const teamMembersMap = useMemo(() => new Map(teamMembers.map(tm => [tm.id, tm])), [teamMembers]);
-  
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-    }, 300);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [searchQuery]);
-
-  const filteredProposals = useMemo(() => {
-    if (!debouncedQuery) {
-      return proposals;
-    }
-    
-    const lowercasedQuery = debouncedQuery.toLowerCase();
-    
-    return proposals.filter(proposal => {
-      const client = clientsMap.get(proposal.clientId);
-      const titleMatch = proposal.title.toLowerCase().includes(lowercasedQuery);
-      const clientMatch = client?.companyName.toLowerCase().includes(lowercasedQuery);
-      return titleMatch || clientMatch;
-    });
-  }, [proposals, debouncedQuery, clientsMap]);
 
   return (
     <div>
@@ -109,6 +91,22 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMem
           {showArchived ? 'Propuestas Archivadas' : 'Propuestas'}
         </h2>
         <div className="flex items-center space-x-4">
+            <div className="hidden sm:flex items-center bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
+                <button 
+                    onClick={() => onSetProposalViewMode('card')} 
+                    className={`p-1.5 rounded-md transition-colors ${proposalViewMode === 'card' ? 'bg-white dark:bg-gray-800 shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                    title="Vista de Tarjetas"
+                >
+                    <Squares2X2Icon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+                </button>
+                <button 
+                    onClick={() => onSetProposalViewMode('gantt')} 
+                    className={`p-1.5 rounded-md transition-colors ${proposalViewMode === 'gantt' ? 'bg-white dark:bg-gray-800 shadow-sm' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                    title="Vista de Gantt"
+                >
+                    <ChartBarIcon className="h-5 w-5 text-gray-700 dark:text-gray-200" />
+                </button>
+            </div>
             <button
               onClick={onToggleShowArchived}
               className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -128,49 +126,62 @@ const ProposalList: React.FC<ProposalListProps> = ({ proposals, clients, teamMem
         </div>
       </div>
       
-      {(showArchived || !canCreateProposals) && (
-        <div className="mb-6 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar por título o cliente..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-          />
+      <div className="mb-6 relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
         </div>
-      )}
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Buscar por título o cliente..."
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+        />
+      </div>
 
-      {filteredProposals.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProposals.map(proposal => (
-            <ProposalCard 
-                key={proposal.id} 
-                proposal={proposal} 
-                client={clientsMap.get(proposal.clientId)}
-                leader={proposal.leaderId ? teamMembersMap.get(proposal.leaderId) : undefined}
-                onSelect={() => onSelectProposal(proposal)} 
-            />
-          ))}
-        </div>
+      {proposalViewMode === 'card' ? (
+          totalProposals > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {proposals.map(proposal => (
+                  <ProposalCard 
+                      key={proposal.id} 
+                      proposal={proposal} 
+                      client={clientsMap.get(proposal.clientId)}
+                      leader={proposal.leaderId ? teamMembersMap.get(proposal.leaderId) : undefined}
+                      onSelect={() => onSelectProposal(proposal)} 
+                  />
+                ))}
+              </div>
+              {totalPages > 1 && (
+                  <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+              )}
+            </>
+          ) : (
+            <div className="text-center py-16 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+                {searchQuery ? (
+                    <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                ) : (
+                    <FileTextIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                )}
+                <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-gray-100">
+                    {searchQuery ? 'No se encontraron resultados' : 'No hay propuestas que coincidan'}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {searchQuery
+                    ? 'Intenta con un término de búsqueda diferente.'
+                    : 'No tienes propuestas que cumplan con los filtros actuales.'}
+                </p>
+            </div>
+          )
       ) : (
-        <div className="text-center py-16 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-            {debouncedQuery ? (
-                <MagnifyingGlassIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-            ) : (
-                <FileTextIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-            )}
-            <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-gray-100">
-                {debouncedQuery ? 'No se encontraron resultados' : 'No hay propuestas que coincidan'}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {debouncedQuery
-                ? 'Intenta con un término de búsqueda diferente.'
-                : 'No tienes propuestas que cumplan con los filtros actuales.'}
-            </p>
-        </div>
+        <GanttChart 
+          proposals={proposals} // Gantt might also need pagination later, but for now it's ok with the page items
+          clients={clients}
+          teamMembers={teamMembers}
+          onSelectProposal={onSelectProposal}
+          onShowDocumentVersions={onShowDocumentVersions}
+        />
       )}
     </div>
   );

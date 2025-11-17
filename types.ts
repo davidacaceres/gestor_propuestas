@@ -87,6 +87,53 @@ export type Notification = {
 };
 
 export type ModalState = {
-  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | 'createTeamMember' | 'editClient' | 'editTeamMember' | null;
+  type: 'createProposal' | 'uploadDocument' | 'viewHistory' | 'createClient' | 'confirmAction' | 'createTeamMember' | 'editClient' | 'editTeamMember' | 'viewDocumentVersions' | null;
   data?: any;
 };
+
+export type View = 'dashboard' | 'proposals' | 'clients' | 'team';
+
+// Props for paginated lists
+export interface ProposalListProps {
+  proposals: Proposal[];
+  totalProposals: number;
+  clients: Client[];
+  teamMembers: TeamMember[];
+  currentUser: User | null;
+  onSelectProposal: (proposal: Proposal) => void;
+  onCreateProposal: () => void;
+  showArchived: boolean;
+  onToggleShowArchived: () => void;
+  proposalViewMode: 'card' | 'gantt';
+  onSetProposalViewMode: (mode: 'card' | 'gantt') => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onShowDocumentVersions: (data: { proposalTitle: string, date: Date, versions: DocumentVersion[] }) => void;
+}
+
+export interface ClientListProps {
+  clients: Client[];
+  currentUser: User | null;
+  onCreateClient: () => void;
+  onSelectClient: (client: Client) => void;
+  onEditClient: (client: Client) => void;
+  onDeleteClient: (client: Client) => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+export interface TeamListProps {
+  teamMembers: TeamMember[];
+  currentUser: User | null;
+  onCreateTeamMember: () => void;
+  onImportTeamMembers: (fileContent: string) => void;
+  onEditTeamMember: (member: TeamMember) => void;
+  onDeleteTeamMember: (member: TeamMember) => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}

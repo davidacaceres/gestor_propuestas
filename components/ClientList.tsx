@@ -1,18 +1,20 @@
 import React from 'react';
-import { Client, User, Role } from '../types';
+import { Client, ClientListProps } from '../types';
 import { PlusIcon, UserGroupIcon, ChevronRightIcon, PencilIcon, TrashIcon } from './Icon';
+import Pagination from './Pagination';
 
-interface ClientListProps {
-  clients: Client[];
-  currentUser: User | null;
-  onCreateClient: () => void;
-  onSelectClient: (client: Client) => void;
-  onEditClient: (client: Client) => void;
-  onDeleteClient: (client: Client) => void;
-}
-
-const ClientList: React.FC<ClientListProps> = ({ clients, currentUser, onCreateClient, onSelectClient, onEditClient, onDeleteClient }) => {
-  const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
+const ClientList: React.FC<ClientListProps> = ({ 
+  clients, 
+  currentUser, 
+  onCreateClient, 
+  onSelectClient, 
+  onEditClient, 
+  onDeleteClient,
+  currentPage,
+  totalPages,
+  onPageChange
+}) => {
+  const hasRole = (role: 'Admin' | 'ProjectManager' | 'TeamMember') => currentUser?.roles.includes(role) ?? false;
   const canManageClients = hasRole('Admin') || hasRole('ProjectManager');
 
   return (
@@ -31,57 +33,62 @@ const ClientList: React.FC<ClientListProps> = ({ clients, currentUser, onCreateC
       </div>
 
       {clients.length > 0 ? (
-        <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-          <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
-            {clients.map((client) => (
-              <li key={client.id}>
-                <div className="px-4 py-4 sm:px-6 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div
-                    className="flex-1 cursor-pointer"
-                    onClick={() => onSelectClient(client)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate">{client.companyName}</p>
-                      <ChevronRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
-                    </div>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                          <UserGroupIcon className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400 dark:text-gray-500" />
-                          {client.contactName}
-                        </p>
+        <>
+          <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
+            <ul role="list" className="divide-y divide-gray-200 dark:divide-gray-700">
+              {clients.map((client) => (
+                <li key={client.id}>
+                  <div className="px-4 py-4 sm:px-6 flex items-center justify-between group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div
+                      className="flex-1 cursor-pointer"
+                      onClick={() => onSelectClient(client)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate">{client.companyName}</p>
+                        <ChevronRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+                      </div>
+                      <div className="mt-2 sm:flex sm:justify-between">
+                        <div className="sm:flex">
+                          <p className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                            <UserGroupIcon className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400 dark:text-gray-500" />
+                            {client.contactName}
+                          </p>
+                        </div>
                       </div>
                     </div>
+                    {canManageClients && (
+                      <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditClient(client);
+                          }}
+                          className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
+                          title="Editar Cliente"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteClient(client);
+                          }}
+                          className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                          title="Eliminar Cliente"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {canManageClients && (
-                    <div className="ml-4 flex-shrink-0 flex items-center space-x-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditClient(client);
-                        }}
-                        className="text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 transition-colors"
-                        title="Editar Cliente"
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteClient(client);
-                        }}
-                        className="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
-                        title="Eliminar Cliente"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {totalPages > 1 && (
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+          )}
+        </>
       ) : (
         <div className="text-center py-16 px-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
             <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />

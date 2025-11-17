@@ -1,13 +1,16 @@
-
 import React from 'react';
 import { Client, Proposal, ProposalStatus } from '../types';
 import { ArrowLeftIcon } from './Icon';
+import Pagination from './Pagination';
 
 interface ClientDetailProps {
   client: Client;
   proposals: Proposal[];
   onBack: () => void;
   onSelectProposal: (proposal: Proposal) => void;
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
 }
 
 const statusClasses: Record<ProposalStatus, string> = {
@@ -18,7 +21,7 @@ const statusClasses: Record<ProposalStatus, string> = {
   'Archivado': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 };
 
-const ClientDetail: React.FC<ClientDetailProps> = ({ client, proposals, onBack, onSelectProposal }) => {
+const ClientDetail: React.FC<ClientDetailProps> = ({ client, proposals, onBack, onSelectProposal, currentPage, totalPages, onPageChange }) => {
   return (
     <div>
       <div className="mb-6">
@@ -70,7 +73,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, proposals, onBack, 
                                               {proposal.status}
                                             </span>
                                         </td>
-                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{proposal.deadline.toLocaleDateString('es-ES')}</td>
+                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(proposal.deadline).toLocaleDateString('es-ES')}</td>
                                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                             <a href="#" onClick={(e) => { e.preventDefault(); onSelectProposal(proposal); }} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300">Ver Propuesta</a>
                                         </td>
@@ -86,6 +89,9 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, proposals, onBack, 
                             </tbody>
                         </table>
                     </div>
+                    {totalPages > 1 && (
+                      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+                    )}
                 </div>
             </div>
         </div>
