@@ -33,36 +33,41 @@ const initialTeamMembers: TeamMember[] = [
 ];
 
 const initialProposals: Proposal[] = [
-  ...Array.from({ length: 15 }, (_, i) => ({
-    id: `prop-${i + 1}`,
-    title: `Propuesta de Expansión ${i + 1}`,
-    clientId: initialClients[i % initialClients.length].id,
-    leaderId: initialTeamMembers[i % initialTeamMembers.length].id,
-    description: `Descripción detallada para la propuesta de expansión #${i + 1}.`,
-    deadline: new Date(new Date().setDate(new Date().getDate() + (i * 2) + 5)),
-    alertDate: new Date(new Date().setDate(new Date().getDate() + i + 2)),
-    status: (['Borrador', 'Enviado', 'Aceptado', 'Rechazado'] as ProposalStatus[])[i % 4],
-    createdAt: new Date(2023, 10, 15 - i),
-    documents: i < 5 ? [
-      {
-        id: `doc-${i + 1}-1`,
-        name: `Contrato Inicial ${i+1}.pdf`,
-        createdAt: new Date(new Date().setDate(new Date().getDate() - 10 + i)),
-        versions: [
-          {
-            versionNumber: 1,
-            fileName: `Contrato_v1_${i+1}.pdf`,
-            fileContent: 'data:application/pdf;base64,',
-            createdAt: new Date(new Date().setDate(new Date().getDate() - 10 + i)),
-            notes: 'Versión inicial'
-          }
-        ]
-      }
-    ] : [],
-    assignedTeam: [],
-    history: [],
-    comments: [],
-  })),
+  ...Array.from({ length: 15 }, (_, i) => {
+    const isArchived = i === 3 || i === 7; // Example: prop-4 and prop-8 are archived
+    const status = (['Borrador', 'Enviado', 'Aceptado', 'Rechazado'] as ProposalStatus[])[i % 4];
+    return {
+      id: `prop-${i + 1}`,
+      title: `Propuesta de Expansión ${i + 1}`,
+      clientId: initialClients[i % initialClients.length].id,
+      leaderId: initialTeamMembers[i % initialTeamMembers.length].id,
+      description: `Descripción detallada para la propuesta de expansión #${i + 1}.`,
+      deadline: new Date(new Date().setDate(new Date().getDate() + (i * 2) + 5)),
+      alertDate: new Date(new Date().setDate(new Date().getDate() + i + 2)),
+      status: isArchived && status === 'Borrador' ? 'Rechazado' : status, // Archived proposals should retain last status
+      isArchived,
+      createdAt: new Date(2023, 10, 15 - i),
+      documents: i < 5 ? [
+        {
+          id: `doc-${i + 1}-1`,
+          name: `Contrato Inicial ${i+1}.pdf`,
+          createdAt: new Date(new Date().setDate(new Date().getDate() - 10 + i)),
+          versions: [
+            {
+              versionNumber: 1,
+              fileName: `Contrato_v1_${i+1}.pdf`,
+              fileContent: 'data:application/pdf;base64,',
+              createdAt: new Date(new Date().setDate(new Date().getDate() - 10 + i)),
+              notes: 'Versión inicial'
+            }
+          ]
+        }
+      ] : [],
+      assignedTeam: [],
+      history: [],
+      comments: [],
+    }
+  }),
 ];
 
 const ITEMS_PER_PAGE = 6;
@@ -133,7 +138,7 @@ const App: React.FC = () => {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const proposalsNeedingAlert = proposals.filter(p => {
-        if (!p.alertDate || p.status === 'Archivado' || p.status === 'Aceptado') {
+        if (!p.alertDate || p.isArchived || p.status === 'Aceptado') {
             return false;
         }
         const alertDate = new Date(p.alertDate);
@@ -161,6 +166,7 @@ const App: React.FC = () => {
       deadline,
       alertDate,
       status: 'Borrador',
+      isArchived: false,
       createdAt: new Date(),
       documents: [],
       assignedTeam: [],
@@ -338,84 +344,99 @@ const App: React.FC = () => {
     });
   };
   
-  const handleConfirmStatusChange = (proposalId: string, status: ProposalStatus) => {
-      if (!currentUser) return;
-      const originalProposal = proposals.find(p => p.id === proposalId);
-      if (!originalProposal) return;
-      
-      if (originalProposal.status === status) return;
+  const handleStatusChange = (proposalId: string, newStatus: ProposalStatus) => {
+    if (!currentUser) return;
+    const originalProposal = proposals.find(p => p.id === proposalId);
+    if (!originalProposal || originalProposal.status === newStatus) return;
 
-      const wasArchived = originalProposal.status === 'Archivado';
-      const isNowArchived = status === 'Archivado';
-      
-      const isArchiving = !wasArchived && isNowArchived;
-      const isUnarchiving = wasArchived && !isNowArchived;
-
-      setProposals(prevProposals => {
-          const updatedProposals = prevProposals.map(p => {
-              if (p.id === proposalId) {
-                  const newEntry: ProposalHistoryEntry = {
-                      id: `hist-${Date.now()}`,
-                      authorId: currentUser.id,
-                      type: 'status',
-                      description: `Estado cambiado de "${originalProposal.status}" a "${status}".`,
-                      timestamp: new Date(),
-                  };
-                  return { ...p, status, history: [newEntry, ...(p.history || [])] };
-              }
-              return p;
-          });
-          
-          addNotification(`El estado de "${originalProposal.title}" cambió a ${status}.`, proposalId);
-
-          if (isArchiving) {
-              setSelectedProposal(null);
-          } else if (isUnarchiving) {
-              setShowArchived(false);
-              setSelectedProposal(null);
-          } else {
-              if (selectedProposal && selectedProposal.id === proposalId) {
-                  const updatedProposal = updatedProposals.find(up => up.id === proposalId);
-                  setSelectedProposal(updatedProposal || null);
-              }
-          }
-          
-          return updatedProposals;
+    setProposals(prev => {
+      const updatedProposals = prev.map(p => {
+        if (p.id === proposalId) {
+          const newEntry: ProposalHistoryEntry = {
+            id: `hist-${Date.now()}`,
+            authorId: currentUser.id,
+            type: 'status',
+            description: `Estado cambiado de "${p.status}" a "${newStatus}".`,
+            timestamp: new Date(),
+          };
+          return { ...p, status: newStatus, history: [newEntry, ...p.history] };
+        }
+        return p;
       });
+
+      if (selectedProposal?.id === proposalId) {
+        setSelectedProposal(updatedProposals.find(p => p.id === proposalId) || null);
+      }
+      addNotification(`El estado de "${originalProposal.title}" cambió a ${newStatus}.`, proposalId);
+      return updatedProposals;
+    });
   };
 
+  const handleConfirmArchiveToggle = (proposalId: string) => {
+    if (!currentUser) return;
+    const originalProposal = proposals.find(p => p.id === proposalId);
+    if (!originalProposal) return;
+    
+    const isArchiving = !originalProposal.isArchived;
 
-  const handleStatusChangeRequest = (proposalId: string, newStatus: ProposalStatus) => {
-    const proposal = proposals.find(p => p.id === proposalId);
-    if (!proposal || proposal.status === newStatus) return;
-
-    const isArchiving = proposal.status !== 'Archivado' && newStatus === 'Archivado';
-    const isUnarchiving = proposal.status === 'Archivado' && newStatus !== 'Archivado';
-
-    if (isArchiving) {
-      setModalState({
-        type: 'confirmAction',
-        data: {
-          title: 'Archivar Propuesta',
-          message: `¿Estás seguro de que quieres archivar la propuesta "${proposal.title}"? No será visible en la lista principal.`,
-          confirmText: 'Archivar',
-          onConfirm: () => handleConfirmStatusChange(proposalId, newStatus),
+    setProposals(prev => {
+        const updatedProposals = prev.map(p => {
+            if (p.id === proposalId) {
+                const newHistoryEntry: ProposalHistoryEntry = {
+                    id: `hist-${Date.now()}`,
+                    authorId: currentUser.id,
+                    type: 'archive',
+                    description: isArchiving ? 'Propuesta archivada.' : 'Propuesta desarchivada.',
+                    timestamp: new Date(),
+                };
+                return { 
+                    ...p, 
+                    isArchived: isArchiving,
+                    status: isArchiving ? p.status : 'Borrador', // Revert to 'Borrador' on unarchive
+                    history: [newHistoryEntry, ...p.history]
+                };
+            }
+            return p;
+        });
+        
+        addNotification(`La propuesta "${originalProposal.title}" fue ${isArchiving ? 'archivada' : 'desarchivada'}.`, proposalId);
+        
+        setSelectedProposal(null);
+        if (!isArchiving) {
+          setShowArchived(false); // Switch to active view after unarchiving
         }
-      });
-    } else if (isUnarchiving) {
+        
+        return updatedProposals;
+    });
+  };
+  
+  const handleArchiveToggleRequest = (proposalId: string) => {
+    const proposal = proposals.find(p => p.id === proposalId);
+    if (!proposal) return;
+
+    if (proposal.isArchived) {
       setModalState({
         type: 'confirmAction',
         data: {
           title: 'Desarchivar Propuesta',
           message: `¿Estás seguro de que quieres desarchivar la propuesta "${proposal.title}"? Volverá a la lista de propuestas activas con el estado "Borrador".`,
           confirmText: 'Desarchivar',
-          onConfirm: () => handleConfirmStatusChange(proposalId, 'Borrador'),
+          onConfirm: () => handleConfirmArchiveToggle(proposalId),
         }
       });
     } else {
-      handleConfirmStatusChange(proposalId, newStatus);
+      setModalState({
+        type: 'confirmAction',
+        data: {
+          title: 'Archivar Propuesta',
+          message: `¿Estás seguro de que quieres archivar la propuesta "${proposal.title}"? No será visible en la lista principal.`,
+          confirmText: 'Archivar',
+          onConfirm: () => handleConfirmArchiveToggle(proposalId),
+        }
+      });
     }
   };
+
 
   const handleConfirmLeaderChange = (proposalId: string, leaderId: string) => {
     if (!currentUser) return;
@@ -765,7 +786,7 @@ const App: React.FC = () => {
   // Memoized lists for rendering
   const visibleProposals = useMemo(() => {
     const baseProposals = proposals.filter(p => 
-        showArchived ? p.status === 'Archivado' : p.status !== 'Archivado'
+        showArchived ? p.isArchived : !p.isArchived
     );
     
     const userFilteredProposals = (canViewAllProposals || !currentUser)
@@ -804,7 +825,8 @@ const App: React.FC = () => {
             onUploadNew={() => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id } })}
             onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })}
             onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })}
-            onUpdateStatus={handleStatusChangeRequest}
+            onUpdateStatus={handleStatusChange}
+            onArchiveToggleRequest={handleArchiveToggleRequest}
             onUpdateProposalLeader={handleLeaderChangeRequest}
             onUpdateProposalDetails={handleUpdateProposalDetails}
             onAssignMember={handleAssignMember}
@@ -831,7 +853,7 @@ const App: React.FC = () => {
         return (
           <Dashboard
             currentUser={currentUser}
-            proposals={visibleProposals}
+            proposals={proposals}
             clients={clients}
             teamMembers={teamMembers}
             onSelectProposal={handleSelectProposal}
@@ -862,7 +884,7 @@ const App: React.FC = () => {
         );
       case 'clients':
         if (selectedClient) {
-          const clientProposals = proposals.filter(p => p.clientId === selectedClient.id);
+          const clientProposals = proposals.filter(p => p.clientId === selectedClient.id && !p.isArchived);
           const clientProposalsTotalPages = Math.ceil(clientProposals.length / ITEMS_PER_PAGE);
           const paginatedClientProposals = clientProposals.slice((clientDetailProposalsPage - 1) * ITEMS_PER_PAGE, clientDetailProposalsPage * ITEMS_PER_PAGE);
           

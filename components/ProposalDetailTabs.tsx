@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Proposal, Document, TeamMember, ProposalHistoryEntryType, Comment, User, Role } from '../types';
-import { PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, DownloadIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon, ChatBubbleLeftRightIcon } from './Icon';
+import { PlusIcon, UploadIcon, HistoryIcon, DocumentIcon, DownloadIcon, UserPlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, TagIcon, PlusCircleIcon, UserGroupIcon, ChatBubbleLeftRightIcon, ArchiveBoxIcon } from './Icon';
 import Pagination from './Pagination';
 import { usePagination } from '../hooks/usePagination';
 
@@ -25,6 +25,7 @@ const historyTypeMap: Record<ProposalHistoryEntryType, { icon: React.FC<{classNa
   document: { icon: DocumentIcon, color: 'text-indigo-500' },
   team: { icon: UserGroupIcon, color: 'text-purple-500' },
   general: { icon: PencilIcon, color: 'text-amber-500' },
+  archive: { icon: ArchiveBoxIcon, color: 'text-gray-500'},
 };
 
 const tabs: { id: Tab; name: string; icon: React.FC<{className?: string}> }[] = [
@@ -64,7 +65,6 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
     const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
     const canManageTeam = hasRole('Admin') || hasRole('ProjectManager');
     
-    const isArchived = proposal.status === 'Archivado';
     const teamMembersMap: Map<string, TeamMember> = new Map(teamMembers.map(tm => [tm.id, tm]));
     
     // Pagination for each tab
@@ -147,7 +147,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                     <div>
                         <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Documentos</h3>
-                        {!isArchived && (
+                        {!proposal.isArchived && (
                             <button onClick={onUploadNew} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                             <PlusIcon className="w-5 h-5 mr-2 -ml-1" />
                             Añadir Documento
@@ -178,33 +178,22 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                                     </td>
                                                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{doc.versions[0]?.createdAt.toLocaleString('es-ES') || 'N/A'}</td>
                                                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                                                        {!isArchived ? (
-                                                            <div className="flex items-center justify-end space-x-4">
-                                                                <button onClick={() => handleDownloadLatestVersion(doc)} className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center" title="Descargar última versión">
-                                                                    <DownloadIcon className="w-5 h-5 mr-1" />
-                                                                    Descargar
-                                                                </button>
+                                                        <div className="flex items-center justify-end space-x-4">
+                                                            <button onClick={() => handleDownloadLatestVersion(doc)} className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center" title="Descargar última versión">
+                                                                <DownloadIcon className="w-5 h-5 mr-1" />
+                                                                Descargar
+                                                            </button>
+                                                            {!proposal.isArchived && (
                                                                 <button onClick={() => onUploadVersion(doc.id, doc.name)} className="text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 flex items-center" title="Subir nueva versión">
                                                                     <UploadIcon className="w-5 h-5 mr-1" />
                                                                     Nueva Versión
                                                                 </button>
-                                                                <button onClick={() => onViewHistory(doc)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center" title="Ver historial de versiones">
-                                                                    <HistoryIcon className="w-5 h-5 mr-1" />
-                                                                    Historial
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex justify-end space-x-4">
-                                                                <button onClick={() => handleDownloadLatestVersion(doc)} className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center" title="Descargar última versión">
-                                                                    <DownloadIcon className="w-5 h-5 mr-1" />
-                                                                    Descargar
-                                                                </button>
-                                                                <button onClick={() => onViewHistory(doc)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center" title="Ver historial de versiones">
-                                                                    <HistoryIcon className="w-5 h-5 mr-1" />
-                                                                    Ver Historial
-                                                                </button>
-                                                            </div>
-                                                        )}
+                                                            )}
+                                                            <button onClick={() => onViewHistory(doc)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center" title="Ver historial de versiones">
+                                                                <HistoryIcon className="w-5 h-5 mr-1" />
+                                                                Historial
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -259,7 +248,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                                             ) : (
                                                 <>
                                                     <p className="text-sm text-gray-700 dark:text-gray-300">{assignedHours} horas</p>
-                                                    {!isArchived && canManageTeam && (
+                                                    {!proposal.isArchived && canManageTeam && (
                                                         <div className="flex items-center space-x-4">
                                                             <button onClick={() => handleEditHours(memberId, assignedHours)} className="text-gray-500 hover:text-primary-700 dark:hover:text-primary-400" title={`Editar horas de ${member.name}`}>
                                                                 <PencilIcon className="w-5 h-5" />
@@ -282,7 +271,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                             
                             {teamPagination.totalPages > 1 && <Pagination {...teamPagination} />}
 
-                            {!isArchived && canManageTeam && availableMembersToAssign.length > 0 && (
+                            {!proposal.isArchived && canManageTeam && availableMembersToAssign.length > 0 && (
                                 <form onSubmit={handleAssignSubmit} className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 sm:flex items-end gap-4 space-y-4 sm:space-y-0">
                                     <div className="flex-grow">
                                         <label htmlFor="team-member" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Asignar nuevo miembro</label>
@@ -328,7 +317,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = ({ proposal, curre
                             <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Comentarios</h3>
                         </div>
                         
-                        {!isArchived && (
+                        {!proposal.isArchived && (
                             <form onSubmit={handleCommentSubmit} className="mb-8">
                                 <div>
                                     <label htmlFor="comment-text" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Añadir un comentario</label>

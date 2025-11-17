@@ -15,7 +15,6 @@ const statusClasses: Record<ProposalStatus, string> = {
     'Enviado': 'bg-blue-500 dark:bg-blue-600',
     'Aceptado': 'bg-green-500 dark:bg-green-600',
     'Rechazado': 'bg-red-500 dark:bg-red-600',
-    'Archivado': 'bg-purple-500 dark:bg-purple-600',
 };
 
 const GanttChart: React.FC<GanttChartProps> = ({ proposals, clients, onSelectProposal, onShowDocumentVersions }) => {

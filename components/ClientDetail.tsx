@@ -18,7 +18,6 @@ const statusClasses: Record<ProposalStatus, string> = {
   'Enviado': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
   'Aceptado': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
   'Rechazado': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-  'Archivado': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 };
 
 const ClientDetail: React.FC<ClientDetailProps> = ({ client, proposals, onBack, onSelectProposal, currentPage, totalPages, onPageChange }) => {
@@ -50,7 +49,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, proposals, onBack, 
       </div>
 
       <div>
-        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Propuestas Asociadas</h3>
+        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">Propuestas Asociadas (Activas)</h3>
         <div className="flow-root">
             <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                 <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
@@ -82,7 +81,7 @@ const ClientDetail: React.FC<ClientDetailProps> = ({ client, proposals, onBack, 
                                 {proposals.length === 0 && (
                                     <tr>
                                         <td colSpan={4} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                                            Este cliente no tiene propuestas asociadas.
+                                            Este cliente no tiene propuestas activas asociadas.
                                         </td>
                                     </tr>
                                 )}

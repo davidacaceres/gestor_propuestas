@@ -28,7 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, proposals, clients, 
   const teamMembersMap = useMemo(() => new Map(teamMembers.map(tm => [tm.id, tm])), [teamMembers]);
 
   const stats = useMemo(() => {
-    const activeProposals = proposals.filter(p => p.status !== 'Archivado');
+    const activeProposals = proposals.filter(p => !p.isArchived);
     const proposalsNeedingAttention = activeProposals.filter(p => p.status === 'Borrador').length;
     const now = new Date();
     const upcomingDeadlines = activeProposals.filter(p => {
@@ -48,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, proposals, clients, 
   const nextDeadlines = useMemo(() => {
     const now = new Date();
     return proposals
-      .filter(p => p.status !== 'Archivado' && new Date(p.deadline) >= now)
+      .filter(p => !p.isArchived && new Date(p.deadline) >= now)
       .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
       .slice(0, 5);
   }, [proposals]);

@@ -1,4 +1,4 @@
-export type ProposalStatus = 'Borrador' | 'Enviado' | 'Aceptado' | 'Rechazado' | 'Archivado';
+export type ProposalStatus = 'Borrador' | 'Enviado' | 'Aceptado' | 'Rechazado';
 
 export type Role = 'Admin' | 'ProjectManager' | 'TeamMember';
 
@@ -45,7 +45,7 @@ export type AssignedMember = {
   assignedHours: number;
 };
 
-export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'team' | 'general';
+export type ProposalHistoryEntryType = 'creation' | 'status' | 'document' | 'team' | 'general' | 'archive';
 
 export type ProposalHistoryEntry = {
   id: string;
@@ -70,6 +70,7 @@ export type Proposal = {
   deadline: Date;
   alertDate?: Date;
   status: ProposalStatus;
+  isArchived: boolean;
   createdAt: Date;
   documents: Document[];
   assignedTeam: AssignedMember[];

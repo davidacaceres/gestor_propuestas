@@ -9,7 +9,6 @@ const statusClasses: Record<ProposalStatus, string> = {
   'Enviado': 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
   'Aceptado': 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
   'Rechazado': 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-  'Archivado': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
 };
 
 const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: TeamMember; onSelect: () => void }> = ({ proposal, client, leader, onSelect }) => {
@@ -17,7 +16,7 @@ const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: Tea
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   
   const alertDate = proposal.alertDate ? new Date(proposal.alertDate) : null;
-  const isUrgent = alertDate && today >= alertDate && proposal.status !== 'Aceptado' && proposal.status !== 'Archivado';
+  const isUrgent = alertDate && today >= alertDate && proposal.status !== 'Aceptado' && !proposal.isArchived;
   
   const cardClasses = `bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border ${
     isUrgent ? 'border-amber-500 dark:border-amber-400' : 'border-gray-200 dark:border-gray-700'
@@ -28,9 +27,16 @@ const ProposalCard: React.FC<{ proposal: Proposal; client?: Client; leader?: Tea
       <div className="p-5">
         <div className="flex justify-between items-start">
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 pr-4">{proposal.title}</h3>
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClasses[proposal.status]}`}>
-            {proposal.status}
-          </span>
+          <div className="flex flex-col items-end gap-y-2">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClasses[proposal.status]}`}>
+              {proposal.status}
+            </span>
+            {proposal.isArchived && (
+               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
+                Archivado
+              </span>
+            )}
+          </div>
         </div>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{client?.companyName || 'Cliente no encontrado'}</p>
         <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
