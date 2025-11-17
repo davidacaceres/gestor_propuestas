@@ -1,4 +1,4 @@
-import { Proposal, Client, TeamMember, User, Role, ProposalStatus, Document, DocumentVersion, AssignedMember, ProposalHistoryEntry, Comment, Task } from './types';
+import { Proposal, Client, TeamMember, User, Role, ProposalStatus, Document, DocumentVersion, AssignedMember, ProposalHistoryEntry, Comment, Task, TaskPriority } from './types';
 
 // --- MOCK DATABASE ---
 
@@ -380,11 +380,11 @@ export const addComment = async (proposalId: string, text: string, authorId: str
 /**
  * Crea una nueva tarea en una propuesta.
  * @param {string} proposalId - ID de la propuesta.
- * @param {object} taskData - Datos de la nueva tarea (incluye title, y opcionalmente description, assignedToId, dueDate).
+ * @param {object} taskData - Datos de la nueva tarea (incluye title, priority y opcionalmente description, assignedToId, dueDate).
  * @param {string} authorId - ID del usuario que crea la tarea.
  * @returns {Promise<Proposal>} La propuesta actualizada con la nueva tarea.
  */
-export const createTask = async (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status'>, authorId: string): Promise<Proposal> => {
+export const createTask = async (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status' | 'comments'>, authorId: string): Promise<Proposal> => {
     await delay(300);
     const proposalIndex = db.proposals.findIndex(p => p.id === proposalId);
     if (proposalIndex === -1) throw new Error("Proposal not found");
@@ -392,10 +392,15 @@ export const createTask = async (proposalId: string, taskData: Omit<Task, 'id' |
     const proposal = db.proposals[proposalIndex];
     const newTask: Task = {
         id: `task-${Date.now()}`,
-        ...taskData,
+        title: taskData.title,
+        description: taskData.description,
+        assignedToId: taskData.assignedToId,
+        dueDate: taskData.dueDate,
+        priority: taskData.priority || 'Media',
         status: 'Pendiente',
         createdAt: new Date(),
         createdBy: authorId,
+        comments: [],
     };
 
     proposal.tasks.push(newTask);
@@ -416,7 +421,7 @@ export const createTask = async (proposalId: string, taskData: Omit<Task, 'id' |
  * Actualiza una tarea existente en una propuesta.
  * @param {string} proposalId - ID de la propuesta.
  * @param {string} taskId - ID de la tarea a actualizar.
- * @param {object} updates - Campos de la tarea a actualizar (p. ej. title, description, status).
+ * @param {object} updates - Campos de la tarea a actualizar (p. ej. title, description, status, priority).
  * @param {string} authorId - ID del usuario que realiza la actualización.
  * @returns {Promise<Proposal>} La propuesta actualizada.
  */
@@ -476,6 +481,44 @@ export const deleteTask = async (proposalId: string, taskId: string, authorId: s
     return deepCopy(proposal);
 };
 
+/**
+ * Añade un comentario a una tarea específica dentro de una propuesta.
+ * @param {string} proposalId - ID de la propuesta que contiene la tarea.
+ * @param {string} taskId - ID de la tarea a la que se añadirá el comentario.
+ * @param {string} text - El contenido del comentario.
+ * @param {string} authorId - ID del usuario que crea el comentario.
+ * @returns {Promise<Proposal>} La propuesta actualizada con el nuevo comentario en la tarea.
+ * @throws Lanza un error si la propuesta o la tarea no se encuentran.
+ */
+export const addCommentToTask = async (proposalId: string, taskId: string, text: string, authorId: string): Promise<Proposal> => {
+    await delay(250);
+    const proposalIndex = db.proposals.findIndex(p => p.id === proposalId);
+    if (proposalIndex === -1) throw new Error("Proposal not found");
+
+    const proposal = db.proposals[proposalIndex];
+    const taskIndex = proposal.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) throw new Error("Task not found");
+    
+    const task = proposal.tasks[taskIndex];
+    const newComment: Comment = { id: `task-comment-${Date.now()}`, authorId, text, createdAt: new Date() };
+
+    if (!task.comments) {
+        task.comments = [];
+    }
+    task.comments.unshift(newComment);
+    
+    const author = db.teamMembers.find(tm => tm.id === authorId);
+    const historyEntry: ProposalHistoryEntry = {
+        id: `hist-${Date.now()}`,
+        authorId,
+        type: 'task',
+        description: `${author?.name || 'Usuario'} comentó en la tarea: "${task.title}".`,
+        timestamp: new Date(),
+    };
+    proposal.history.unshift(historyEntry);
+
+    return deepCopy(proposal);
+};
 
 // --- CLIENTS ---
 

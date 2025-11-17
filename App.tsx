@@ -401,7 +401,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleCreateTask = async (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status'>) => {
+  const handleCreateTask = async (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status' | 'comments'>) => {
     if (!currentUser) return;
     try {
       const updatedProposal = await api.createTask(proposalId, taskData, currentUser.id);
@@ -434,6 +434,28 @@ const App: React.FC = () => {
     } catch (e) {
       console.error("Failed to delete task", e);
       alert('Error al eliminar la tarea.');
+    }
+  };
+
+  const handleAddCommentToTask = async (proposalId: string, taskId: string, text: string) => {
+    if (!currentUser) return;
+    try {
+        const updatedProposal = await api.addCommentToTask(proposalId, taskId, text, currentUser.id);
+        setProposals(prev => prev.map(p => (p.id === proposalId ? updatedProposal : p)));
+        if (selectedProposal?.id === proposalId) {
+          setSelectedProposal(updatedProposal);
+        }
+
+        const task = updatedProposal.tasks.find(t => t.id === taskId);
+        if (task?.assignedToId && task.assignedToId !== currentUser.id) {
+            const assignee = teamMembers.find(tm => tm.id === task.assignedToId);
+            if (assignee) {
+                addNotification(`${currentUser.name} comentó en tu tarea "${task.title}" en la propuesta "${updatedProposal.title}".`, proposalId);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to add comment to task", e);
+        alert('Error al añadir el comentario a la tarea.');
     }
   };
   
@@ -537,7 +559,7 @@ const App: React.FC = () => {
 
     if (selectedProposal) {
       return (
-         <ProposalDetail proposal={selectedProposal} currentUser={currentUser} clients={clients} teamMembers={teamMembers} onBack={handleBackFromProposalDetail} onUploadNew={() => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id } })} onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })} onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })} onUpdateStatus={handleStatusChange} onArchiveToggleRequest={handleArchiveToggleRequest} onUpdateProposalLeader={handleLeaderChangeRequest} onUpdateProposalDetails={handleUpdateProposalDetails} onAssignMember={handleAssignMember} onUnassignMember={handleUnassignMember} onUpdateAssignedHours={handleUpdateAssignedHours} onAddComment={handleAddComment} onCreateTask={handleCreateTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} />
+         <ProposalDetail proposal={selectedProposal} currentUser={currentUser} clients={clients} teamMembers={teamMembers} onBack={handleBackFromProposalDetail} onUploadNew={() => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id } })} onUploadVersion={(documentId, documentName) => setModalState({ type: 'uploadDocument', data: { proposalId: selectedProposal.id, documentId, documentName } })} onViewHistory={(document) => setModalState({ type: 'viewHistory', data: { document } })} onUpdateStatus={handleStatusChange} onArchiveToggleRequest={handleArchiveToggleRequest} onUpdateProposalLeader={handleLeaderChangeRequest} onUpdateProposalDetails={handleUpdateProposalDetails} onAssignMember={handleAssignMember} onUnassignMember={handleUnassignMember} onUpdateAssignedHours={handleUpdateAssignedHours} onAddComment={handleAddComment} onCreateTask={handleCreateTask} onUpdateTask={handleUpdateTask} onDeleteTask={handleDeleteTask} onAddCommentToTask={handleAddCommentToTask} />
       );
     }
     

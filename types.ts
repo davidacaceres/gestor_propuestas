@@ -64,6 +64,8 @@ export type Comment = {
 
 export type TaskStatus = 'Pendiente' | 'En Progreso' | 'Completada';
 
+export type TaskPriority = 'Alta' | 'Media' | 'Baja';
+
 export type Task = {
   id: string;
   title: string;
@@ -71,8 +73,10 @@ export type Task = {
   assignedToId?: string;
   dueDate?: Date;
   status: TaskStatus;
+  priority: TaskPriority;
   createdAt: Date;
   createdBy: string;
+  comments?: Comment[];
 };
 
 export type Proposal = {

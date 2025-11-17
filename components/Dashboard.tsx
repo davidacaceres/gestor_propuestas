@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Proposal, Client, TeamMember, User, View, ProposalHistoryEntry } from '../types';
-import { FileTextIcon, ClockIcon, CheckIcon, UserGroupIcon, ExclamationTriangleIcon, HistoryIcon } from './Icon';
+import { Proposal, Client, TeamMember, User, View, ProposalHistoryEntry, Task, Comment } from '../types';
+import { FileTextIcon, ClockIcon, CheckIcon, UserGroupIcon, ExclamationTriangleIcon, HistoryIcon, ChatBubbleLeftRightIcon } from './Icon';
 
 interface DashboardProps {
   currentUser: User | null;
@@ -54,14 +54,60 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, proposals, clients, 
   }, [proposals]);
 
   const recentActivity = useMemo(() => {
-      const allHistory: (ProposalHistoryEntry & {proposalTitle: string, proposalId: string})[] = [];
-      proposals.forEach(p => {
-          (p.history || []).forEach(h => {
-              allHistory.push({ ...h, proposalTitle: p.title, proposalId: p.id });
-          })
-      });
-      return allHistory.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 5);
-  }, [proposals]);
+    if (!currentUser) return [];
+
+    type ActivityItem = 
+      | { type: 'history', data: ProposalHistoryEntry & {proposalTitle: string, proposalId: string} }
+      | { type: 'task_comment', data: {
+          id: string;
+          timestamp: Date;
+          authorId: string;
+          commentText: string;
+          taskTitle: string;
+          proposalTitle: string;
+          proposalId: string;
+        }};
+    
+    const allActivities: ActivityItem[] = [];
+
+    proposals.forEach(p => {
+        // 1. Gather proposal history
+        (p.history || []).forEach(h => {
+            allActivities.push({ type: 'history', data: { ...h, proposalTitle: p.title, proposalId: p.id } });
+        });
+        
+        // 2. Gather relevant task comments
+        const isLeader = p.leaderId === currentUser.id;
+        (p.tasks || []).forEach(task => {
+            const isAssignee = task.assignedToId === currentUser.id;
+            if (isLeader || isAssignee) {
+                (task.comments || []).forEach(comment => {
+                    // Don't show your own comments unless you are both leader and assignee of the same task
+                    if (comment.authorId !== currentUser.id || (isLeader && isAssignee)) {
+                        allActivities.push({
+                            type: 'task_comment',
+                            data: {
+                                id: comment.id,
+                                timestamp: new Date(comment.createdAt),
+                                authorId: comment.authorId,
+                                commentText: comment.text,
+                                taskTitle: task.title,
+                                proposalTitle: p.title,
+                                proposalId: p.id,
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    });
+    
+    // 3. Sort and slice
+    return allActivities
+      .sort((a, b) => new Date(b.data.timestamp).getTime() - new Date(a.data.timestamp).getTime())
+      .slice(0, 7);
+
+  }, [proposals, currentUser]);
 
   return (
     <div>
@@ -120,19 +166,39 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, proposals, clients, 
           </h2>
           <ul className="space-y-4">
             {recentActivity.length > 0 ? recentActivity.map(item => {
-              const author = teamMembersMap.get(item.authorId);
+              const author = teamMembersMap.get(item.data.authorId);
+              const proposal = proposals.find(p => p.id === item.data.proposalId);
               return (
-                <li key={item.id}>
-                    <button onClick={() => {
-                        const proposal = proposals.find(p => p.id === item.proposalId);
-                        if(proposal) onSelectProposal(proposal);
-                    }} className="w-full text-left group">
-                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                            <span className="font-bold text-gray-800 dark:text-gray-100">{author?.name || 'Sistema'}</span> {item.description.includes('creada') ? 'creó la propuesta' : 'actualizó la propuesta'} <span className="font-bold text-primary-600 dark:text-primary-400 group-hover:underline">{item.proposalTitle}</span>.
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {new Date(item.timestamp).toLocaleString('es-ES')}
-                        </p>
+                <li key={item.data.id}>
+                    <button onClick={() => proposal && onSelectProposal(proposal)} className="w-full text-left group">
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0 pt-0.5">
+                            {item.type === 'task_comment' ? (
+                                <ChatBubbleLeftRightIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                            ) : (
+                                <HistoryIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                            )}
+                        </div>
+                        <div className="flex-1">
+                            {item.type === 'task_comment' ? (
+                                <>
+                                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                                      <span className="font-bold text-gray-800 dark:text-gray-100">{author?.name || 'Sistema'}</span>
+                                      {` comentó en la tarea "${item.data.taskTitle}" de `}
+                                      <span className="font-bold text-primary-600 dark:text-primary-400 group-hover:underline">{item.data.proposalTitle}</span>.
+                                  </p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 italic">"{item.data.commentText}"</p>
+                                </>
+                            ) : (
+                                <p className="text-sm text-gray-700 dark:text-gray-300">
+                                    <span className="font-bold text-gray-800 dark:text-gray-100">{author?.name || 'Sistema'}</span> {item.data.description.includes('creada') ? 'creó la propuesta' : item.data.description.replace(author?.name || '', '').trim().replace(/^por\s*/, '')} <span className="font-bold text-primary-600 dark:text-primary-400 group-hover:underline">{item.data.proposalTitle}</span>.
+                                </p>
+                            )}
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {new Date(item.data.timestamp).toLocaleString('es-ES')}
+                            </p>
+                        </div>
+                      </div>
                     </button>
                 </li>
               )

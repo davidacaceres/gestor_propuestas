@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Proposal, TeamMember, User, Role, Task, TaskStatus } from '../types';
-import { PlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, UserIcon, ClockIcon, EllipsisVerticalIcon } from './Icon';
+import { Proposal, TeamMember, User, Role, Task, TaskStatus, TaskPriority } from '../types';
+import { PlusIcon, TrashIcon, PencilIcon, CheckIcon, XIcon, UserIcon, ClockIcon, EllipsisVerticalIcon, ChatBubbleLeftRightIcon, ArrowUpIcon, MinusIcon, ArrowDownIcon } from './Icon';
+import TaskDetailModal from './TaskDetailModal';
 
 interface TaskListProps {
   proposal: Proposal;
   teamMembers: TeamMember[];
   currentUser: User | null;
-  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status'>) => void;
+  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status' | 'comments'>) => void;
   onUpdateTask: (proposalId: string, taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'createdBy'>>) => void;
   onDeleteTask: (proposalId: string, taskId: string) => void;
+  onAddCommentToTask: (proposalId: string, taskId: string, text: string) => void;
 }
 
 const statusStyles: Record<TaskStatus, { bg: string, text: string, border: string }> = {
@@ -17,17 +19,27 @@ const statusStyles: Record<TaskStatus, { bg: string, text: string, border: strin
   'Completada': { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-700 dark:text-green-300', border: 'border-green-500' },
 };
 
-const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser, onCreateTask, onUpdateTask, onDeleteTask }) => {
+const priorityIcons: Record<TaskPriority, { icon: React.FC<{className?: string}>; color: string; label: string }> = {
+    'Alta': { icon: ArrowUpIcon, color: 'text-red-500', label: 'Prioridad Alta' },
+    'Media': { icon: MinusIcon, color: 'text-yellow-500', label: 'Prioridad Media' },
+    'Baja': { icon: ArrowDownIcon, color: 'text-green-500', label: 'Prioridad Baja' },
+};
+
+const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser, onCreateTask, onUpdateTask, onDeleteTask, onAddCommentToTask }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>('Media');
   
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editedTitle, setEditedTitle] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [editedAssignedTo, setEditedAssignedTo] = useState('');
   const [editedDueDate, setEditedDueDate] = useState('');
+  const [editedPriority, setEditedPriority] = useState<TaskPriority>('Media');
+  const [editError, setEditError] = useState('');
   
   const [activeMenuTaskId, setActiveMenuTaskId] = useState<string | null>(null);
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState<Task | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   
   const teamMembersMap = useMemo(() => new Map(teamMembers.map(tm => [tm.id, tm])), [teamMembers]);
@@ -51,9 +63,11 @@ const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser,
     onCreateTask(proposal.id, {
       title: newTaskTitle.trim(),
       description: newTaskDescription.trim() || undefined,
+      priority: newTaskPriority,
     });
     setNewTaskTitle('');
     setNewTaskDescription('');
+    setNewTaskPriority('Media');
   };
   
   const handleStartEdit = (task: Task) => {
@@ -62,24 +76,35 @@ const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser,
     setEditedDescription(task.description || '');
     setEditedAssignedTo(task.assignedToId || '');
     setEditedDueDate(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
+    setEditedPriority(task.priority);
+    setEditError('');
   };
 
   const handleCancelEdit = () => {
     setEditingTask(null);
+    setEditError('');
   };
 
   const handleSaveEdit = (taskId: string) => {
-    const dueDate = editedDueDate ? new Date(editedDueDate) : undefined;
+    setEditError('');
+    const dueDate = editedDueDate ? new Date(editedDueDate + 'T00:00:00') : undefined;
+
     if (dueDate) {
-        dueDate.setMinutes(dueDate.getMinutes() + dueDate.getTimezoneOffset());
+        const proposalDeadline = new Date(proposal.deadline);
+        proposalDeadline.setHours(23, 59, 59, 999);
+        
+        if (dueDate > proposalDeadline) {
+            setEditError('La fecha no puede ser posterior a la fecha límite de la propuesta.');
+            return;
+        }
     }
-    const dueDateUtc = dueDate ? new Date(Date.UTC(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate())) : undefined;
 
     onUpdateTask(proposal.id, taskId, {
       title: editedTitle.trim(),
       description: editedDescription.trim() || undefined,
       assignedToId: editedAssignedTo || undefined,
-      dueDate: dueDateUtc,
+      dueDate: dueDate,
+      priority: editedPriority,
     });
     setEditingTask(null);
   };
@@ -90,14 +115,19 @@ const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser,
   
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, Task[]> = { 'Pendiente': [], 'En Progreso': [], 'Completada': [] };
+    const priorityOrder: Record<TaskPriority, number> = { 'Alta': 1, 'Media': 2, 'Baja': 3 };
+
     proposal.tasks.forEach(task => {
         if (grouped[task.status]) {
             grouped[task.status].push(task);
         }
     });
-    // Sort tasks within each status group
+
     for (const status in grouped) {
-      grouped[status as TaskStatus].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      grouped[status as TaskStatus].sort((a,b) => 
+        priorityOrder[a.priority] - priorityOrder[b.priority] || 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
     }
     return grouped;
   }, [proposal.tasks]);
@@ -119,18 +149,25 @@ const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser,
               {tasksByStatus[status].map(task => {
                 const isEditing = editingTask?.id === task.id;
                 const assignee = task.assignedToId ? teamMembersMap.get(task.assignedToId) : null;
+                const PriorityIcon = priorityIcons[task.priority].icon;
                 
                 return isEditing ? (
                   <div key={task.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border-2 border-primary-500 space-y-3">
                     <input type="text" value={editedTitle} onChange={e => setEditedTitle(e.target.value)} className="w-full font-semibold text-gray-900 dark:text-gray-100 bg-transparent border-b border-gray-300 dark:border-gray-600 focus:outline-none focus:border-primary-500"/>
                     <textarea value={editedDescription} onChange={e => setEditedDescription(e.target.value)} rows={3} placeholder="Añadir descripción..." className="mt-2 w-full text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-primary-500"/>
                      <div className="space-y-2">
+                        <select value={editedPriority} onChange={e => setEditedPriority(e.target.value as TaskPriority)} className="w-full text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-primary-500">
+                           <option value="Alta">Prioridad Alta</option>
+                           <option value="Media">Prioridad Media</option>
+                           <option value="Baja">Prioridad Baja</option>
+                         </select>
                          <select value={editedAssignedTo} onChange={e => setEditedAssignedTo(e.target.value)} className="w-full text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-primary-500">
                            <option value="">Sin asignar</option>
                            {assignedTeamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                          </select>
                          <input type="date" value={editedDueDate} onChange={e => setEditedDueDate(e.target.value)} className="w-full text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md p-1 focus:outline-none focus:ring-1 focus:ring-primary-500"/>
                      </div>
+                     {editError && <p className="text-xs text-red-500 mt-1">{editError}</p>}
                      <div className="flex items-center justify-end space-x-2 pt-2">
                         <button onClick={handleCancelEdit} className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">Cancelar</button>
                         <button onClick={() => handleSaveEdit(task.id)} className="px-3 py-1 text-xs font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700">Guardar</button>
@@ -164,14 +201,25 @@ const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser,
                       )}
                     </div>
                      {task.description && (
-                      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{task.description}</p>
-                    )}
-                    {(assignee || task.dueDate) && (
-                      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-2 space-x-3">
-                        {assignee && <span className="flex items-center" title={`Asignado a: ${assignee.name}`}><UserIcon className="w-4 h-4 mr-1"/>{assignee.alias || assignee.name.split(' ')[0]}</span>}
-                        {task.dueDate && <span className="flex items-center" title={`Vence: ${new Date(task.dueDate).toLocaleDateString()}`}><ClockIcon className="w-4 h-4 mr-1"/>{new Date(task.dueDate).toLocaleDateString('es-ES')}</span>}
+                      <div className="mt-2 cursor-pointer group" onClick={() => setSelectedTaskForModal(task)}>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400">{task.description}</p>
                       </div>
                     )}
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center space-x-3 min-w-0">
+                           <span title={priorityIcons[task.priority].label}>
+                                <PriorityIcon className={`w-4 h-4 ${priorityIcons[task.priority].color}`} />
+                           </span>
+                            {assignee && <span className="flex items-center truncate" title={`Asignado a: ${assignee.name}`}><UserIcon className="w-4 h-4 mr-1 flex-shrink-0"/> <span className="truncate">{assignee.alias || assignee.name.split(' ')[0]}</span></span>}
+                            {task.dueDate && <span className="flex items-center" title={`Vence: ${new Date(task.dueDate).toLocaleDateString()}`}><ClockIcon className="w-4 h-4 mr-1"/>{new Date(task.dueDate).toLocaleDateString('es-ES')}</span>}
+                        </div>
+                        {task.comments && task.comments.length > 0 && (
+                          <button onClick={() => setSelectedTaskForModal(task)} className="flex items-center hover:text-primary-600 dark:hover:text-primary-400" title={`${task.comments.length} comentario(s)`}>
+                              <ChatBubbleLeftRightIcon className="w-4 h-4 mr-1" />
+                              <span>{task.comments.length}</span>
+                          </button>
+                        )}
+                    </div>
                   </div>
                 )
               })}
@@ -192,9 +240,18 @@ const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser,
                     value={newTaskDescription}
                     onChange={e => setNewTaskDescription(e.target.value)}
                     placeholder="Añadir una descripción (opcional)..."
-                    rows={3}
+                    rows={2}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
+                  <select
+                    value={newTaskPriority}
+                    onChange={e => setNewTaskPriority(e.target.value as TaskPriority)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="Media">Prioridad Media</option>
+                    <option value="Alta">Prioridad Alta</option>
+                    <option value="Baja">Prioridad Baja</option>
+                  </select>
                   <button type="submit" className="w-full inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200 dark:bg-primary-900/50 dark:text-primary-300 dark:hover:bg-primary-900">
                       <PlusIcon className="w-4 h-4 mr-2" />
                       Añadir Tarea
@@ -205,6 +262,18 @@ const TaskList: React.FC<TaskListProps> = ({ proposal, teamMembers, currentUser,
           </div>
         ))}
       </div>
+      
+      {selectedTaskForModal && (
+        <TaskDetailModal
+          isOpen={!!selectedTaskForModal}
+          onClose={() => setSelectedTaskForModal(null)}
+          task={selectedTaskForModal}
+          proposalId={proposal.id}
+          teamMembers={teamMembers}
+          currentUser={currentUser}
+          onAddComment={onAddCommentToTask}
+        />
+      )}
     </div>
   );
 };

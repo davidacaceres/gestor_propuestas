@@ -21,23 +21,17 @@ const CreateProposalForm: React.FC<CreateProposalFormProps> = ({ clients, onSubm
     setError('');
 
     if (title.trim() && clientId && description.trim() && deadline) {
-      const deadlineDate = new Date(deadline);
-      const alertDateObj = alertDate ? new Date(alertDate) : undefined;
-
-      deadlineDate.setMinutes(deadlineDate.getMinutes() + deadlineDate.getTimezoneOffset());
-      if (alertDateObj) {
-        alertDateObj.setMinutes(alertDateObj.getMinutes() + alertDateObj.getTimezoneOffset());
-      }
+      // El valor del input "YYYY-MM-DD" se interpreta por defecto como medianoche UTC.
+      // Al añadir T00:00:00 se asegura que se cree como medianoche en la zona horaria local del usuario.
+      const deadlineDate = new Date(deadline + 'T00:00:00');
+      const alertDateObj = alertDate ? new Date(alertDate + 'T00:00:00') : undefined;
       
       if (alertDateObj && alertDateObj >= deadlineDate) {
         setError('La fecha de alerta debe ser anterior a la fecha límite.');
         return;
       }
-
-      const deadlineUtc = new Date(Date.UTC(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate()));
-      const alertDateUtc = alertDateObj ? new Date(Date.UTC(alertDateObj.getFullYear(), alertDateObj.getMonth(), alertDateObj.getDate())) : undefined;
       
-      onSubmit(title, clientId, description, deadlineUtc, alertDateUtc);
+      onSubmit(title, clientId, description, deadlineDate, alertDateObj);
     }
   };
 

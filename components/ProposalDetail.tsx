@@ -20,9 +20,10 @@ interface ProposalDetailProps {
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
   onAddComment: (proposalId: string, text: string) => void;
-  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status'>) => void;
+  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status' | 'comments'>) => void;
   onUpdateTask: (proposalId: string, taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'createdBy'>>) => void;
   onDeleteTask: (proposalId: string, taskId: string) => void;
+  onAddCommentToTask: (proposalId: string, taskId: string, text: string) => void;
 }
 
 const statusClasses: Record<ProposalStatus, string> = {
@@ -65,27 +66,21 @@ const ProposalDetail: React.FC<ProposalDetailProps> = (props) => {
 
   const handleSave = () => {
     setEditError('');
-    const deadlineDate = new Date(editedDeadline);
-    const alertDateObj = editedAlertDate ? new Date(editedAlertDate) : undefined;
-
-    deadlineDate.setMinutes(deadlineDate.getMinutes() + deadlineDate.getTimezoneOffset());
-    if (alertDateObj) {
-      alertDateObj.setMinutes(alertDateObj.getMinutes() + alertDateObj.getTimezoneOffset());
-    }
+    // El valor del input "YYYY-MM-DD" se interpreta por defecto como medianoche UTC.
+    // Al añadir T00:00:00 se asegura que se cree como medianoche en la zona horaria local del usuario.
+    const deadlineDate = new Date(editedDeadline + 'T00:00:00');
+    const alertDateObj = editedAlertDate ? new Date(editedAlertDate + 'T00:00:00') : undefined;
 
     if (alertDateObj && alertDateObj >= deadlineDate) {
       setEditError('La fecha de alerta debe ser anterior a la fecha límite.');
       return;
     }
-
-    const deadlineUtc = new Date(Date.UTC(deadlineDate.getFullYear(), deadlineDate.getMonth(), deadlineDate.getDate()));
-    const alertDateUtc = alertDateObj ? new Date(Date.UTC(alertDateObj.getFullYear(), alertDateObj.getMonth(), alertDateObj.getDate())) : undefined;
     
     onUpdateProposalDetails(proposal.id, {
       title: editedTitle,
       description: editedDescription,
-      deadline: deadlineUtc,
-      alertDate: alertDateUtc,
+      deadline: deadlineDate,
+      alertDate: alertDateObj,
     });
     setIsEditing(false);
   };

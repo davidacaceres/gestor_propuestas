@@ -16,9 +16,10 @@ interface ProposalDetailTabsProps {
   onUnassignMember: (proposalId: string, memberId: string) => void;
   onUpdateAssignedHours: (proposalId: string, memberId: string, hours: number) => void;
   onAddComment: (proposalId: string, text: string) => void;
-  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status'>) => void;
+  onCreateTask: (proposalId: string, taskData: Omit<Task, 'id' | 'createdAt' | 'createdBy' | 'status' | 'comments'>) => void;
   onUpdateTask: (proposalId: string, taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt' | 'createdBy'>>) => void;
   onDeleteTask: (proposalId: string, taskId: string) => void;
+  onAddCommentToTask: (proposalId: string, taskId: string, text: string) => void;
 }
 
 type Tab = 'documents' | 'tasks' | 'team' | 'comments' | 'history';
@@ -67,7 +68,7 @@ const TabButton: React.FC<TabButtonProps> = ({ tab, currentTab, onClick }) => {
 };
 
 const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = (props) => {
-    const { proposal, currentUser, teamMembers, onUploadNew, onUploadVersion, onViewHistory, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment, onCreateTask, onUpdateTask, onDeleteTask } = props;
+    const { proposal, currentUser, teamMembers, onUploadNew, onUploadVersion, onViewHistory, onAssignMember, onUnassignMember, onUpdateAssignedHours, onAddComment, onCreateTask, onUpdateTask, onDeleteTask, onAddCommentToTask } = props;
     const [activeTab, setActiveTab] = useState<Tab>('documents');
     
     const hasRole = (role: Role) => currentUser?.roles.includes(role) ?? false;
@@ -229,6 +230,7 @@ const ProposalDetailTabs: React.FC<ProposalDetailTabsProps> = (props) => {
                         onCreateTask={onCreateTask} 
                         onUpdateTask={onUpdateTask}
                         onDeleteTask={onDeleteTask}
+                        onAddCommentToTask={onAddCommentToTask}
                     />
                 )}
 
